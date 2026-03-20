@@ -9,6 +9,7 @@ import {
   ChevronDown,
   Clock,
   Copy,
+  Globe,
   ImagePlus,
   Pencil,
   Trash2,
@@ -52,6 +53,16 @@ const log = createLogger('Home');
 const WEB_SEARCH_STORAGE_KEY = 'webSearchEnabled';
 const LANGUAGE_STORAGE_KEY = 'generationLanguage';
 const RECENT_OPEN_STORAGE_KEY = 'recentClassroomsOpen';
+
+interface PublicClassroomItem {
+  id: string;
+  name: string;
+  description?: string;
+  language?: string;
+  sceneCount: number;
+  createdAt: string;
+  firstSlide?: Slide | null;
+}
 
 interface FormState {
   pdfFile: File | null;
@@ -131,6 +142,8 @@ function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [classrooms, setClassrooms] = useState<StageListItem[]>([]);
   const [thumbnails, setThumbnails] = useState<Record<string, Slide>>({});
+  const [publicClassrooms, setPublicClassrooms] = useState<PublicClassroomItem[]>([]);
+  const [publicThumbnails, setPublicThumbnails] = useState<Record<string, Slide>>({});
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -171,6 +184,21 @@ function HomePage() {
 
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Store hydration on mount
     loadClassrooms();
+
+    // Load public classrooms from server
+    fetch('/api/classroom')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.classrooms) {
+          setPublicClassrooms(data.classrooms);
+          const thumbs: Record<string, Slide> = {};
+          for (const c of data.classrooms) {
+            if (c.firstSlide) thumbs[c.id] = c.firstSlide;
+          }
+          setPublicThumbnails(thumbs);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const handleDelete = (id: string, e: React.MouseEvent) => {
@@ -489,7 +517,7 @@ function HomePage() {
         transition={{ duration: 0.6, ease: 'easeOut' }}
         className={cn(
           'relative z-20 w-full max-w-[800px] flex flex-col items-center',
-          classrooms.length === 0 ? 'justify-center min-h-[calc(100dvh-8rem)]' : 'mt-[10vh]',
+          classrooms.length === 0 && publicClassrooms.length === 0 ? 'justify-center min-h-[calc(100dvh-8rem)]' : 'mt-[10vh]',
         )}
       >
         {/* ── Logo ── */}
@@ -606,6 +634,43 @@ function HomePage() {
           )}
         </AnimatePresence>
       </motion.div>
+
+      {/* ═══ Public classrooms ═══ */}
+      {publicClassrooms.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.45 }}
+          className="relative z-10 mt-10 w-full max-w-6xl flex flex-col items-center"
+        >
+          <div className="w-full flex items-center gap-4 py-2">
+            <div className="flex-1 h-px bg-border/40" />
+            <span className="shrink-0 flex items-center gap-2 text-[13px] text-muted-foreground/60 select-none">
+              <Globe className="size-3.5" />
+              {t('classroom.publicClassrooms')}
+              <span className="text-[11px] tabular-nums opacity-60">{publicClassrooms.length}</span>
+            </span>
+            <div className="flex-1 h-px bg-border/40" />
+          </div>
+
+          <div className="pt-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-8 w-full">
+            {publicClassrooms.map((pc, i) => (
+              <motion.div
+                key={pc.id}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.04, duration: 0.35, ease: 'easeOut' }}
+              >
+                <PublicClassroomCard
+                  classroom={pc}
+                  slide={publicThumbnails[pc.id]}
+                  onClick={() => router.push(`/classroom/${pc.id}`)}
+                />
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      )}
 
       {/* ═══ Recent classrooms — collapsible ═══ */}
       {classrooms.length > 0 && (
@@ -978,6 +1043,85 @@ function GreetingBar() {
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+// ─── Public Classroom Card — no delete button ───────────────────
+function PublicClassroomCard({
+  classroom,
+  slide,
+  onClick,
+}: {
+  classroom: PublicClassroomItem;
+  slide?: Slide;
+  onClick: () => void;
+}) {
+  const { t } = useI18n();
+  const thumbRef = useRef<HTMLDivElement>(null);
+  const [thumbWidth, setThumbWidth] = useState(0);
+
+  useEffect(() => {
+    const el = thumbRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      setThumbWidth(Math.round(entry.contentRect.width));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const formatCreatedAt = (iso: string) => {
+    const date = new Date(iso);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return t('classroom.today');
+    if (diffDays === 1) return t('classroom.yesterday');
+    if (diffDays < 7) return `${diffDays} ${t('classroom.daysAgo')}`;
+    return date.toLocaleDateString();
+  };
+
+  return (
+    <div className="group cursor-pointer" onClick={onClick}>
+      <div
+        ref={thumbRef}
+        className="relative w-full aspect-[16/9] rounded-2xl bg-slate-100 dark:bg-slate-800/80 overflow-hidden transition-transform duration-200 group-hover:scale-[1.02]"
+      >
+        {slide && thumbWidth > 0 ? (
+          <ThumbnailSlide
+            slide={slide}
+            size={thumbWidth}
+            viewportSize={slide.viewportSize ?? 1000}
+            viewportRatio={slide.viewportRatio ?? 0.5625}
+          />
+        ) : !slide ? (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="size-12 rounded-2xl bg-gradient-to-br from-violet-100 to-blue-100 dark:from-violet-900/30 dark:to-blue-900/30 flex items-center justify-center">
+              <span className="text-xl opacity-50">📄</span>
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="mt-2.5 px-1 flex items-center gap-2">
+        <span className="shrink-0 inline-flex items-center rounded-full bg-violet-100 dark:bg-violet-900/30 px-2 py-0.5 text-[11px] font-medium text-violet-600 dark:text-violet-400">
+          {classroom.sceneCount} {t('classroom.slides')} · {formatCreatedAt(classroom.createdAt)}
+        </span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <p className="font-medium text-[15px] truncate text-foreground/90 min-w-0">
+              {classroom.name}
+            </p>
+          </TooltipTrigger>
+          <TooltipContent
+            side="bottom"
+            sideOffset={4}
+            className="!max-w-[min(90vw,32rem)] break-words whitespace-normal"
+          >
+            {classroom.name}
+          </TooltipContent>
+        </Tooltip>
+      </div>
     </div>
   );
 }

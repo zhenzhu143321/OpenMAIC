@@ -296,15 +296,51 @@ OpenMAIC/
 curl -X POST http://localhost:8002/api/generate-classroom \
   -H "Content-Type: application/json" \
   -d '{"requirement": "教我 Python 基础"}'
-# 返回: { "jobId": "abc123", "pollUrl": "...", "status": "queued" }
+# 返回:
+# {
+#   "success": true,
+#   "jobId": "abc123",
+#   "pollUrl": "/api/generate-classroom/abc123",
+#   "status": "queued"
+# }
 
 # 2. 轮询进度
 curl http://localhost:8002/api/generate-classroom/abc123
-# 返回: { "status": "running", "step": "generating-scenes", "progress": 0.6 }
+# 返回:
+# {
+#   "success": true,
+#   "jobId": "abc123",
+#   "status": "running",
+#   "step": "generating_scenes",
+#   "progress": 60
+# }
 
 # 3. 完成后获取课堂 URL
-# 返回: { "status": "succeeded", "result": { "classroomId": "xxx", "url": "/classroom/xxx" } }
+# 返回:
+# {
+#   "success": true,
+#   "jobId": "abc123",
+#   "status": "succeeded",
+#   "result": { "classroomId": "xxx", "url": "/classroom/xxx" }
+# }
+
+# 4. 失败时
+# 返回:
+# {
+#   "success": false,
+#   "jobId": "abc123",
+#   "status": "failed",
+#   "error": "错误描述"
+# }
 ```
+
+所有 API 响应都包含 `success: true/false` 字段。其他通用字段：
+- `jobId` — 任务唯一标识
+- `status` — 任务状态（`queued` / `running` / `succeeded` / `failed`）
+- `step` — 当前步骤（下划线格式，如 `generating_outlines`、`generating_scenes`、`generating_actions`）
+- `progress` — 整数百分比（0-100）
+- `result` — 成功时包含课堂数据
+- `error` — 失败时包含错误描述
 
 ## 9. 前端页面路由
 
@@ -388,7 +424,7 @@ grep -i "error\|fail" /tmp/openmaic.log | tail -20
 # 检查生成任务状态
 curl -s http://localhost:8002/api/generate-classroom/{jobId} | python3 -m json.tool
 ```
-生成任务是内存中的，服务重启后任务丢失。
+生成任务持久化到 `data/classroom-jobs/` 目录，服务重启后不会丢失。系统有 30 分钟 stale 检测机制——超过 30 分钟未更新的 `running` 状态任务会被标记为 `failed`。
 
 ### 构建失败
 ```bash
@@ -401,7 +437,51 @@ pnpm install
 pnpm build
 ```
 
-## 13. 代理相关
+## 13. 公共课程与媒体缓存
+
+### 工作原理
+
+公共课程（Public Classroom）支持媒体缓存机制，避免重复生成 TTS 音频和 AI 图片：
+
+1. **首次访问**：第一个用户打开公共课程时，前端检测到缺少媒体缓存，触发 TTS 和图片生成，生成完成后自动上传到服务端
+2. **后续访问**：其他用户打开同一课程时，直接从服务端加载已缓存的媒体文件，无需重新生成
+3. **存储位置**：缓存文件存储在 `data/classrooms/{id}/media/` 目录
+
+### 相关 API
+
+```bash
+# 查询课堂媒体缓存状态
+curl http://localhost:8002/api/classroom/media?classroomId={id}
+
+# 上传媒体缓存（前端自动调用）
+curl -X POST http://localhost:8002/api/classroom/media \
+  -H "Content-Type: application/json" \
+  -d '{"classroomId": "xxx", "files": [...]}'
+```
+
+所有响应包含 `success: true/false` 字段。
+
+## 14. data/ 目录说明
+
+`data/` 目录是服务端持久化存储的根目录，位于项目根目录下：
+
+```
+data/
+├── classrooms/
+│   ├── {id}/
+│   │   ├── classroom.json    ← 课堂数据（场景、大纲、配置等）
+│   │   └── media/            ← 媒体缓存（公共课程）
+│   │       ├── tts_*.mp3     ← TTS 音频文件
+│   │       └── gen_img_*.png ← AI 生成图片
+└── classroom-jobs/
+    └── {jobId}.json          ← 生成任务状态（含 30min stale 检测）
+```
+
+- `classrooms/{id}/classroom.json` — 完整课堂数据，包括所有场景内容、智能体配置等
+- `classrooms/{id}/media/` — 公共课程的媒体缓存，首次访问时生成并上传
+- `classroom-jobs/{jobId}.json` — 异步生成任务的持久化状态，轮询 API 读取此文件
+
+## 15. 代理相关
 
 本机通过 Shadowsocks 代理访问外网：
 - HTTP 代理：`http://127.0.0.1:17891`

@@ -152,6 +152,11 @@ async function generateSingleMedia(
     const objectUrl = URL.createObjectURL(blob);
     const posterObjectUrl = posterBlob ? URL.createObjectURL(posterBlob) : undefined;
     useMediaGenerationStore.getState().markDone(req.elementId, objectUrl, posterObjectUrl);
+
+    // Fire-and-forget upload to server media cache
+    uploadBlobToServer(stageId, req.elementId, blob, req.type === 'image' ? 'png' : 'mp4').catch(
+      () => {},
+    );
   } catch (err) {
     if (abortSignal?.aborted) return;
     const message = err instanceof Error ? err.message : String(err);
@@ -283,4 +288,26 @@ async function fetchAsBlob(url: string): Promise<Blob> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to fetch blob: ${res.status}`);
   return res.blob();
+}
+
+/** Convert blob to base64 and upload to server media cache */
+async function uploadBlobToServer(
+  classroomId: string,
+  fileId: string,
+  blob: Blob,
+  ext: string,
+): Promise<void> {
+  const buffer = await blob.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  const base64 = btoa(binary);
+
+  await fetch('/api/classroom/media', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ classroomId, fileId, ext, base64 }),
+  });
 }
