@@ -138,6 +138,10 @@ export const stageZhCN = {
   },
   share: {
     notReady: '生成完成后可分享',
+    publish: '发布为公共课',
+    publishing: '正在发布...',
+    publishSuccess: '发布成功',
+    publishFailed: '发布失败',
   },
 } as const;
 
@@ -282,5 +286,9 @@ export const stageEnUS = {
   },
   share: {
     notReady: 'Available after generation completes',
+    publish: 'Publish as public',
+    publishing: 'Publishing...',
+    publishSuccess: 'Published successfully',
+    publishFailed: 'Publish failed',
   },
 } as const;

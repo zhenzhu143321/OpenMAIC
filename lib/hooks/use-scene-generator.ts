@@ -204,14 +204,39 @@ async function fetchSceneActions(
   return response.json();
 }
 
+/** Upload media to server cache (fire-and-forget) */
+async function uploadMediaToServer(
+  classroomId: string,
+  fileId: string,
+  base64: string,
+  ext: string,
+): Promise<void> {
+  await fetch('/api/classroom/media', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ classroomId, fileId, ext, base64 }),
+  });
+}
+
+/** Snapshot of TTS settings, used to pin voice across a batch run */
+export interface TTSOverrides {
+  providerId: TTSProviderId;
+  voice: string;
+  speed: number;
+  apiKey?: string;
+  baseUrl?: string;
+}
+
 /** Generate TTS for one speech action and store in IndexedDB */
 export async function generateAndStoreTTS(
   audioId: string,
   text: string,
   signal?: AbortSignal,
+  ttsOverrides?: TTSOverrides,
 ): Promise<void> {
   const settings = useSettingsStore.getState();
-  if (settings.ttsProviderId === 'browser-native-tts') return;
+  const providerId = ttsOverrides?.providerId ?? settings.ttsProviderId;
+  if (providerId === 'browser-native-tts') return;
 
   const ttsProviderConfig = settings.ttsProvidersConfig?.[settings.ttsProviderId];
   const response = await fetch('/api/generate/tts', {
@@ -220,11 +245,11 @@ export async function generateAndStoreTTS(
     body: JSON.stringify({
       text,
       audioId,
-      ttsProviderId: settings.ttsProviderId,
-      ttsVoice: settings.ttsVoice,
-      ttsSpeed: settings.ttsSpeed,
-      ttsApiKey: ttsProviderConfig?.apiKey || undefined,
-      ttsBaseUrl: ttsProviderConfig?.baseUrl || undefined,
+      ttsProviderId: providerId,
+      ttsVoice: ttsOverrides?.voice ?? settings.ttsVoice,
+      ttsSpeed: ttsOverrides?.speed ?? settings.ttsSpeed,
+      ttsApiKey: ttsOverrides?.apiKey ?? ttsProviderConfig?.apiKey ?? undefined,
+      ttsBaseUrl: ttsOverrides?.baseUrl ?? ttsProviderConfig?.baseUrl ?? undefined,
     }),
     signal,
   });
@@ -252,6 +277,12 @@ export async function generateAndStoreTTS(
     format: data.format,
     createdAt: Date.now(),
   });
+
+  // Fire-and-forget upload to server media cache
+  const stageId = useStageStore.getState().stage?.id;
+  if (stageId) {
+    uploadMediaToServer(stageId, audioId, data.base64, data.format).catch(() => {});
+  }
 }
 
 /** Generate TTS for all speech actions in a scene. Returns result. */

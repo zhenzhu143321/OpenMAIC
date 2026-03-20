@@ -10,6 +10,7 @@ import {
   Download,
   FileDown,
   Package,
+  Globe,
 } from 'lucide-react';
 import { useI18n } from '@/lib/hooks/use-i18n';
 import { useTheme } from '@/lib/hooks/use-theme';
@@ -21,10 +22,15 @@ import { useSettingsStore } from '@/lib/store/settings';
 import { useStageStore } from '@/lib/store/stage';
 import { useMediaGenerationStore } from '@/lib/store/media-generation';
 import { useExportPPTX } from '@/lib/export/use-export-pptx';
+import { db } from '@/lib/utils/database';
+import { toast } from 'sonner';
+import { createLogger } from '@/lib/logger';
 
 interface HeaderProps {
   readonly currentSceneTitle: string;
 }
+
+const log = createLogger('Header');
 
 export function Header({ currentSceneTitle }: HeaderProps) {
   const { t, locale, setLocale } = useI18n();
@@ -33,6 +39,7 @@ export function Header({ currentSceneTitle }: HeaderProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [languageOpen, setLanguageOpen] = useState(false);
   const [themeOpen, setThemeOpen] = useState(false);
+  const [publishing, setPublishing] = useState(false);
 
   // Model setup state
   const currentModelId = useSettingsStore((s) => s.modelId);
@@ -52,6 +59,91 @@ export function Header({ currentSceneTitle }: HeaderProps) {
     generatingOutlines.length === 0 &&
     failedOutlines.length === 0 &&
     Object.values(mediaTasks).every((task) => task.status === 'done' || task.status === 'failed');
+
+  const stage = useStageStore((s) => s.stage);
+  const outlines = useStageStore((s) => s.outlines);
+
+  const publishClassroom = useCallback(async () => {
+    if (publishing || !stage) return;
+    setPublishing(true);
+    try {
+      // 1. Save classroom.json to server
+      const res = await fetch('/api/classroom', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stage, scenes, outlines }),
+      });
+      if (!res.ok) throw new Error(`Save failed: ${res.status}`);
+
+      // 2. Upload TTS audio files from IndexedDB (only for this classroom's scenes)
+      const ownAudioIds = new Set<string>();
+      for (const scene of scenes) {
+        for (const action of scene.actions || []) {
+          if (action.type === 'speech' && 'audioId' in action && action.audioId) {
+            ownAudioIds.add(action.audioId);
+          }
+        }
+      }
+      for (const audioId of ownAudioIds) {
+        try {
+          const audio = await db.audioFiles.get(audioId);
+          if (!audio) continue;
+          const buf = await audio.blob.arrayBuffer();
+          const base64 = btoa(
+            new Uint8Array(buf).reduce((s, b) => s + String.fromCharCode(b), ''),
+          );
+          await fetch('/api/classroom/media', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              classroomId: stage.id,
+              fileId: audio.id,
+              ext: audio.format,
+              base64,
+            }),
+          });
+        } catch {
+          log.warn('Failed to upload TTS:', audioId);
+        }
+      }
+
+      // 3. Upload completed media (images/videos) from media generation tasks
+      for (const task of Object.values(mediaTasks)) {
+        if (task.status !== 'done' || !task.objectUrl) continue;
+        // Skip server-cached URLs (already on server)
+        if (task.objectUrl.startsWith('/api/')) continue;
+        try {
+          const blobRes = await fetch(task.objectUrl);
+          if (!blobRes.ok) continue;
+          const blob = await blobRes.blob();
+          const buf = await blob.arrayBuffer();
+          const base64 = btoa(
+            new Uint8Array(buf).reduce((s, b) => s + String.fromCharCode(b), ''),
+          );
+          const ext = task.type === 'image' ? 'png' : 'mp4';
+          await fetch('/api/classroom/media', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              classroomId: stage.id,
+              fileId: task.elementId,
+              ext,
+              base64,
+            }),
+          });
+        } catch {
+          log.warn('Failed to upload media:', task.elementId);
+        }
+      }
+
+      toast.success(t('share.publishSuccess'));
+    } catch (err) {
+      log.error('Publish failed:', err);
+      toast.error(t('share.publishFailed'));
+    } finally {
+      setPublishing(false);
+    }
+  }, [publishing, stage, scenes, outlines, mediaTasks, t]);
 
   const languageRef = useRef<HTMLDivElement>(null);
   const themeRef = useRef<HTMLDivElement>(null);
@@ -236,6 +328,25 @@ export function Header({ currentSceneTitle }: HeaderProps) {
             )}
           </div>
         </div>
+
+        {/* Publish Button */}
+        <button
+          onClick={publishClassroom}
+          disabled={!canExport || publishing}
+          title={canExport ? (publishing ? t('share.publishing') : t('share.publish')) : t('share.notReady')}
+          className={cn(
+            'shrink-0 p-2 rounded-full transition-all',
+            canExport && !publishing
+              ? 'text-gray-400 dark:text-gray-500 hover:bg-white dark:hover:bg-gray-700 hover:text-gray-800 dark:hover:text-gray-200 hover:shadow-sm'
+              : 'text-gray-300 dark:text-gray-600 cursor-not-allowed opacity-50',
+          )}
+        >
+          {publishing ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Globe className="w-4 h-4" />
+          )}
+        </button>
 
         {/* Export Dropdown */}
         <div className="relative" ref={exportRef}>

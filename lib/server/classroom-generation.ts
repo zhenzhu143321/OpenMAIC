@@ -146,6 +146,11 @@ export async function generateClassroom(
     pdfText,
     undefined,
     aiCall,
+    undefined,
+    {
+      imageGenerationEnabled: true,
+      videoGenerationEnabled: false,
+    },
   );
 
   if (!outlinesResult.success || !outlinesResult.data) {
@@ -239,6 +244,7 @@ export async function generateClassroom(
       id: stageId,
       stage,
       scenes,
+      outlines,
     },
     options.baseUrl,
   );
