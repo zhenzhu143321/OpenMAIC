@@ -1,0 +1,41 @@
+export const courseZhCN = {
+  course: {
+    name: '课程名称',
+    college: '学院',
+    major: '专业',
+    description: '课程简介',
+    teacherName: '教师姓名',
+    create: '创建课程',
+    edit: '编辑课程',
+    delete: '删除课程',
+    classroomCount: '课堂数量',
+    myCourses: '我的课程',
+    standaloneClassrooms: '独立课堂',
+    addClassroom: '添加课堂',
+    removeClassroom: '移除课堂',
+    noCourses: '暂无课程',
+    noClassrooms: '暂无课堂',
+    confirmDelete: '确定删除此课程吗？',
+  },
+};
+
+export const courseEnUS = {
+  course: {
+    name: 'Course Name',
+    college: 'College',
+    major: 'Major',
+    description: 'Description',
+    teacherName: 'Teacher Name',
+    create: 'Create Course',
+    edit: 'Edit Course',
+    delete: 'Delete Course',
+    classroomCount: 'Classroom Count',
+    myCourses: 'My Courses',
+    standaloneClassrooms: 'Standalone Classrooms',
+    addClassroom: 'Add Classroom',
+    removeClassroom: 'Remove Classroom',
+    noCourses: 'No courses yet',
+    noClassrooms: 'No classrooms yet',
+    confirmDelete: 'Are you sure you want to delete this course?',
+  },
+};

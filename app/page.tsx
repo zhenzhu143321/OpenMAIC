@@ -47,6 +47,7 @@ import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useDraftCache } from '@/lib/hooks/use-draft-cache';
 import { SpeechButton } from '@/components/audio/speech-button';
+import { useCourseStore } from '@/lib/store/course';
 
 const log = createLogger('Home');
 
@@ -147,6 +148,8 @@ function HomePage() {
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [activeTab, setActiveTab] = useState<'courses' | 'standalone'>('courses');
+  const { courses, fetchCourses } = useCourseStore();
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -183,22 +186,20 @@ function HomePage() {
     useMediaGenerationStore.setState({ tasks: {} });
 
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Store hydration on mount
-    loadClassrooms();
-
-    // Load public classrooms from server
-    fetch('/api/classroom')
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.classrooms) {
-          setPublicClassrooms(data.classrooms);
-          const thumbs: Record<string, Slide> = {};
-          for (const c of data.classrooms) {
-            if (c.firstSlide) thumbs[c.id] = c.firstSlide;
-          }
-          setPublicThumbnails(thumbs);
+    Promise.all([
+      loadClassrooms(),
+      fetchCourses(),
+      fetch('/api/classroom').then(res => res.json())
+    ]).then(([, , publicData]) => {
+      if (publicData.success && publicData.classrooms) {
+        setPublicClassrooms(publicData.classrooms);
+        const thumbs: Record<string, Slide> = {};
+        for (const c of publicData.classrooms) {
+          if (c.firstSlide) thumbs[c.id] = c.firstSlide;
         }
-      })
-      .catch(() => {});
+        setPublicThumbnails(thumbs);
+      }
+    }).catch(() => {});
   }, []);
 
   const handleDelete = (id: string, e: React.MouseEvent) => {
@@ -673,15 +674,57 @@ function HomePage() {
       )}
 
       {/* ═══ Recent classrooms — collapsible ═══ */}
-      {classrooms.length > 0 && (
+      {(classrooms.length > 0 || courses.length > 0) && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
           className="relative z-10 mt-10 w-full max-w-6xl flex flex-col items-center"
         >
-          {/* Trigger — divider-line with centered text */}
-          <button
+          {/* Tab buttons */}
+          <div className="flex gap-4 mb-4">
+            <button
+              onClick={() => setActiveTab('courses')}
+              className={cn(
+                'px-4 py-2 rounded transition-colors',
+                activeTab === 'courses' ? 'bg-blue-500 text-white' : 'bg-gray-200'
+              )}
+            >
+              {t('course.myCourses')} ({courses.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('standalone')}
+              className={cn(
+                'px-4 py-2 rounded transition-colors',
+                activeTab === 'standalone' ? 'bg-blue-500 text-white' : 'bg-gray-200'
+              )}
+            >
+              {t('course.standaloneClassrooms')} ({classrooms.length})
+            </button>
+          </div>
+
+          {/* Courses tab */}
+          {activeTab === 'courses' && courses.length > 0 && (
+            <div className="w-full grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {courses.map((course) => (
+                <div
+                  key={course.id}
+                  onClick={() => router.push(`/course/${course.id}`)}
+                  className="border rounded p-4 cursor-pointer hover:shadow-lg transition-shadow"
+                >
+                  <h3 className="font-semibold">{course.name}</h3>
+                  <p className="text-sm text-gray-600">{course.college}</p>
+                  <p className="text-xs text-gray-500 mt-2">{course.classroomCount} {t('course.classroomCount')}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Standalone classrooms tab */}
+          {activeTab === 'standalone' && (
+            <>
+              {/* Trigger — divider-line with centered text */}
+              <button
             onClick={() => {
               const next = !recentOpen;
               setRecentOpen(next);
@@ -746,6 +789,8 @@ function HomePage() {
               </motion.div>
             )}
           </AnimatePresence>
+            </>
+          )}
         </motion.div>
       )}
 
