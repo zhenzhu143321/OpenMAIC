@@ -22,7 +22,7 @@ export function CourseForm({ initialData, onSubmit, onCancel }: CourseFormProps)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({ ...formData, classroomIds: [] });
+    onSubmit(formData);
   };
 
   return (

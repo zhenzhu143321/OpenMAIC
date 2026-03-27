@@ -8,7 +8,7 @@ interface CourseState {
   isLoading: boolean;
   fetchCourses: () => Promise<void>;
   fetchCourse: (id: string) => Promise<void>;
-  createCourse: (data: Omit<Course, 'id' | 'createdAt' | 'updatedAt'>) => Promise<string>;
+  createCourse: (data: Omit<Course, 'id' | 'createdAt' | 'updatedAt' | 'classroomIds'>) => Promise<string>;
   updateCourse: (id: string, data: Partial<Course>) => Promise<void>;
   deleteCourse: (id: string) => Promise<void>;
   addClassroom: (courseId: string, classroomId: string) => Promise<void>;
@@ -51,6 +51,7 @@ export const useCourseStore = create<CourseState>((set, get) => ({
     const id = `course_${nanoid(10)}`;
     const course: Course = {
       ...data,
+      classroomIds: [],
       id,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

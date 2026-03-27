@@ -148,7 +148,7 @@ function HomePage() {
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [activeTab, setActiveTab] = useState<'courses' | 'standalone'>('courses');
+  const [activeTab, setActiveTab] = useState<'courses' | 'standalone'>('standalone');
   const { courses, fetchCourses } = useCourseStore();
 
   // Close dropdowns when clicking outside

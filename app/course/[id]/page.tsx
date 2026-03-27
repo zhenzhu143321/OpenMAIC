@@ -53,7 +53,7 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
         <div className="space-y-2">
           {currentCourse.classroomIds.map((id) => (
             <div key={id} className="border rounded p-4 flex justify-between items-center">
-              <span className="cursor-pointer" onClick={() => router.push(`/stage/${id}`)}>{id}</span>
+              <span className="cursor-pointer" onClick={() => router.push(`/classroom/${id}`)}>{id}</span>
               <button onClick={() => removeClassroom(params.id, id)} className="text-red-500 text-sm">
                 {t('course.removeClassroom')}
               </button>
