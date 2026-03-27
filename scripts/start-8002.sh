@@ -15,4 +15,8 @@ if [[ ! -f .next/standalone/server.js ]]; then
   exit 1
 fi
 
+# Copy static assets (required for standalone mode)
+cp -r .next/static .next/standalone/.next/static 2>/dev/null || true
+cp -r public .next/standalone/public 2>/dev/null || true
+
 exec node .next/standalone/server.js

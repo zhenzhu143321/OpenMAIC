@@ -23,6 +23,7 @@ import { db } from '@/lib/utils/database';
 import { MAX_PDF_CONTENT_CHARS, MAX_VISION_IMAGES } from '@/lib/constants/generation';
 import { nanoid } from 'nanoid';
 import type { Stage } from '@/lib/types/stage';
+import { COURSE_CHAPTER_CONTEXT_KEY, type CourseChapterContext } from '@/lib/types/course';
 import type { SceneOutline, PdfImage, ImageMapping } from '@/lib/types/generation';
 import { AgentRevealModal } from '@/components/agent/agent-reveal-modal';
 import { createLogger } from '@/lib/logger';
@@ -372,6 +373,18 @@ function GenerationPreviewContent() {
         createdAt: Date.now(),
         updatedAt: Date.now(),
       };
+
+      // Write stageId into courseChapterContext so publish can do the binding
+      try {
+        const ctxStr = sessionStorage.getItem(COURSE_CHAPTER_CONTEXT_KEY);
+        if (ctxStr) {
+          const ctx = JSON.parse(ctxStr) as CourseChapterContext;
+          ctx.stageId = stageId;
+          sessionStorage.setItem(COURSE_CHAPTER_CONTEXT_KEY, JSON.stringify(ctx));
+        }
+      } catch {
+        // non-fatal
+      }
 
       if (settings.agentMode === 'auto') {
         const agentStepIdx = activeSteps.findIndex((s) => s.id === 'agent-generation');
@@ -745,6 +758,7 @@ function GenerationPreviewContent() {
   const goBackToHome = () => {
     abortControllerRef.current?.abort();
     sessionStorage.removeItem('generationSession');
+    sessionStorage.removeItem(COURSE_CHAPTER_CONTEXT_KEY);
     router.push('/');
   };
 

@@ -25,6 +25,7 @@ import { useExportPPTX } from '@/lib/export/use-export-pptx';
 import { db } from '@/lib/utils/database';
 import { toast } from 'sonner';
 import { createLogger } from '@/lib/logger';
+import { COURSE_CHAPTER_CONTEXT_KEY, type CourseChapterContext } from '@/lib/types/course';
 
 interface HeaderProps {
   readonly currentSceneTitle: string;
@@ -137,6 +138,28 @@ export function Header({ currentSceneTitle }: HeaderProps) {
       }
 
       toast.success(t('share.publishSuccess'));
+
+      // Auto-bind to course chapter if this classroom was created from a chapter context
+      try {
+        const ctxStr = sessionStorage.getItem(COURSE_CHAPTER_CONTEXT_KEY);
+        if (ctxStr && stage) {
+          const ctx = JSON.parse(ctxStr) as CourseChapterContext;
+          if (ctx.stageId === stage.id) {
+            await fetch('/api/course/chapters', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                courseId: ctx.courseId,
+                chapterId: ctx.chapterId,
+                classroomId: stage.id,
+              }),
+            });
+            sessionStorage.removeItem(COURSE_CHAPTER_CONTEXT_KEY);
+          }
+        }
+      } catch (err) {
+        log.warn('Auto-bind to chapter failed (non-fatal):', err);
+      }
     } catch (err) {
       log.error('Publish failed:', err);
       toast.error(t('share.publishFailed'));

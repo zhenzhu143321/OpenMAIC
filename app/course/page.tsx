@@ -55,7 +55,7 @@ export default function CoursePage() {
                 <p className="text-sm text-gray-600">{course.college} - {course.major}</p>
                 <p className="text-sm text-gray-500 mt-2">{course.description}</p>
                 <p className="text-sm mt-2">{t('course.teacherName')}: {course.teacherName}</p>
-                <p className="text-sm text-gray-500">{t('course.classroomCount')}: {course.classroomCount}</p>
+                <p className="text-sm text-gray-500">{t('course.chapterCount')}: {course.chapterCount}</p>
               </div>
               <button onClick={() => handleDelete(course.id)} className="mt-2 text-red-500 text-sm">
                 {t('course.delete')}

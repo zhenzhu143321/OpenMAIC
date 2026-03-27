@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import type { Course, CourseListItem } from '@/lib/types/course';
+import { nanoid } from 'nanoid';
+import type { Course, CourseChapter, CourseListItem } from '@/lib/types/course';
 import { PROJECT_ROOT, writeJsonFileAtomic } from './classroom-storage';
 import { withCourseLock } from './course-lock';
 
@@ -8,6 +9,26 @@ const COURSES_DIR = path.join(PROJECT_ROOT, 'data', 'courses');
 
 async function ensureCoursesDir() {
   await fs.mkdir(COURSES_DIR, { recursive: true });
+}
+
+// Migrate old-format course (classroomIds[]) to new format (chapters[]).
+// Writes back immediately to stabilize chapter IDs.
+async function migrateCourseIfNeeded(
+  filePath: string,
+  raw: Record<string, unknown>,
+): Promise<Course> {
+  if (Array.isArray((raw as unknown as Course).chapters)) return raw as unknown as Course;
+  const ids = (raw.classroomIds as string[] | undefined) ?? [];
+  const chapters: CourseChapter[] = ids.map((cid, i) => ({
+    id: nanoid(10),
+    title: `第 ${i + 1} 章`,
+    order: i,
+    classroomId: cid,
+  }));
+  const { classroomIds: _removed, ...rest } = raw;
+  const migrated = { ...(rest as Omit<Course, 'chapters'>), chapters } as Course;
+  await writeJsonFileAtomic(filePath, migrated);
+  return migrated;
 }
 
 export async function persistCourse(course: Course): Promise<void> {
@@ -20,7 +41,8 @@ export async function readCourse(id: string): Promise<Course | null> {
   const filePath = path.join(COURSES_DIR, `${id}.json`);
   try {
     const content = await fs.readFile(filePath, 'utf-8');
-    return JSON.parse(content) as Course;
+    const raw = JSON.parse(content) as Record<string, unknown>;
+    return await migrateCourseIfNeeded(filePath, raw);
   } catch {
     return null;
   }
@@ -30,13 +52,15 @@ export async function listCourses(): Promise<CourseListItem[]> {
   await ensureCoursesDir();
   try {
     const files = await fs.readdir(COURSES_DIR);
-    const jsonFiles = files.filter(f => f.endsWith('.json'));
+    const jsonFiles = files.filter((f) => f.endsWith('.json'));
 
     const courses = await Promise.all(
       jsonFiles.map(async (file) => {
+        const filePath = path.join(COURSES_DIR, file);
         try {
-          const content = await fs.readFile(path.join(COURSES_DIR, file), 'utf-8');
-          const course = JSON.parse(content) as Course;
+          const content = await fs.readFile(filePath, 'utf-8');
+          const raw = JSON.parse(content) as Record<string, unknown>;
+          const course = await migrateCourseIfNeeded(filePath, raw);
           return {
             id: course.id,
             name: course.name,
@@ -44,13 +68,13 @@ export async function listCourses(): Promise<CourseListItem[]> {
             major: course.major,
             description: course.description,
             teacherName: course.teacherName,
-            classroomCount: course.classroomIds.length,
+            chapterCount: course.chapters.length,
             createdAt: course.createdAt,
-          };
+          } satisfies CourseListItem;
         } catch {
           return null;
         }
-      })
+      }),
     );
 
     return courses
@@ -66,35 +90,63 @@ export async function deleteCourse(id: string): Promise<void> {
   await fs.unlink(filePath);
 }
 
-export async function addClassroomToCourse(courseId: string, classroomId: string): Promise<void> {
-  await withCourseLock(courseId, async () => {
+export async function addChapter(
+  courseId: string,
+  data: { title: string; description?: string },
+): Promise<CourseChapter> {
+  return withCourseLock(courseId, async () => {
     const course = await readCourse(courseId);
     if (!course) throw new Error('Course not found');
-    if (!course.classroomIds.includes(classroomId)) {
-      course.classroomIds.push(classroomId);
-      course.updatedAt = new Date().toISOString();
-      await persistCourse(course);
-    }
+    const chapter: CourseChapter = {
+      id: nanoid(10),
+      title: data.title,
+      description: data.description,
+      order: course.chapters.length,
+    };
+    course.chapters.push(chapter);
+    course.updatedAt = new Date().toISOString();
+    await persistCourse(course);
+    return chapter;
   });
 }
 
-export async function removeClassroomFromCourse(courseId: string, classroomId: string): Promise<void> {
+export async function updateChapter(
+  courseId: string,
+  chapterId: string,
+  updates: Partial<Pick<CourseChapter, 'title' | 'description' | 'classroomId'>>,
+): Promise<void> {
   await withCourseLock(courseId, async () => {
     const course = await readCourse(courseId);
     if (!course) throw new Error('Course not found');
-    course.classroomIds = course.classroomIds.filter(id => id !== classroomId);
+    const chapter = course.chapters.find((c) => c.id === chapterId);
+    if (!chapter) throw new Error('Chapter not found');
+    Object.assign(chapter, updates);
     course.updatedAt = new Date().toISOString();
     await persistCourse(course);
   });
 }
 
-export async function reorderClassrooms(courseId: string, newOrder: string[]): Promise<void> {
+export async function removeChapter(courseId: string, chapterId: string): Promise<void> {
   await withCourseLock(courseId, async () => {
     const course = await readCourse(courseId);
     if (!course) throw new Error('Course not found');
-    course.classroomIds = newOrder;
+    course.chapters = course.chapters
+      .filter((c) => c.id !== chapterId)
+      .map((c, i) => ({ ...c, order: i }));
     course.updatedAt = new Date().toISOString();
     await persistCourse(course);
   });
 }
 
+export async function reorderChapters(courseId: string, chapterIds: string[]): Promise<void> {
+  await withCourseLock(courseId, async () => {
+    const course = await readCourse(courseId);
+    if (!course) throw new Error('Course not found');
+    const chapterMap = new Map(course.chapters.map((c) => [c.id, c]));
+    course.chapters = chapterIds
+      .filter((id) => chapterMap.has(id))
+      .map((id, i) => ({ ...chapterMap.get(id)!, order: i }));
+    course.updatedAt = new Date().toISOString();
+    await persistCourse(course);
+  });
+}

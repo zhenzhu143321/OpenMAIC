@@ -2,11 +2,11 @@
 
 import { useState } from 'react';
 import { useI18n } from '@/lib/hooks/use-i18n';
-import type { Course } from '@/lib/types/course';
+import type { CourseFormData } from '@/lib/types/course';
 
 interface CourseFormProps {
-  initialData?: Partial<Course>;
-  onSubmit: (data: Omit<Course, 'id' | 'createdAt' | 'updatedAt' | 'classroomIds'>) => void;
+  initialData?: Partial<CourseFormData>;
+  onSubmit: (data: CourseFormData) => void;
   onCancel: () => void;
 }
 

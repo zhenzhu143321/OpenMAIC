@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Course, CourseListItem } from '@/lib/types/course';
+import type { Course, CourseChapter, CourseFormData, CourseListItem } from '@/lib/types/course';
 import { nanoid } from 'nanoid';
 
 interface CourseState {
@@ -8,12 +8,13 @@ interface CourseState {
   isLoading: boolean;
   fetchCourses: () => Promise<void>;
   fetchCourse: (id: string) => Promise<void>;
-  createCourse: (data: Omit<Course, 'id' | 'createdAt' | 'updatedAt' | 'classroomIds'>) => Promise<string>;
-  updateCourse: (id: string, data: Partial<Course>) => Promise<void>;
+  createCourse: (data: CourseFormData) => Promise<string>;
+  updateCourse: (id: string, data: Partial<CourseFormData>) => Promise<void>;
   deleteCourse: (id: string) => Promise<void>;
-  addClassroom: (courseId: string, classroomId: string) => Promise<void>;
-  removeClassroom: (courseId: string, classroomId: string) => Promise<void>;
-  reorderClassrooms: (courseId: string, newOrder: string[]) => Promise<void>;
+  addChapter: (courseId: string, title: string, description?: string) => Promise<void>;
+  updateChapter: (courseId: string, chapterId: string, updates: Partial<CourseChapter>) => Promise<void>;
+  removeChapter: (courseId: string, chapterId: string) => Promise<void>;
+  reorderChapters: (courseId: string, chapterIds: string[]) => Promise<void>;
 }
 
 export const useCourseStore = create<CourseState>((set, get) => ({
@@ -51,7 +52,7 @@ export const useCourseStore = create<CourseState>((set, get) => ({
     const id = `course_${nanoid(10)}`;
     const course: Course = {
       ...data,
-      classroomIds: [],
+      chapters: [],
       id,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -85,29 +86,38 @@ export const useCourseStore = create<CourseState>((set, get) => ({
     await get().fetchCourses();
   },
 
-  addClassroom: async (courseId, classroomId) => {
-    await fetch('/api/course/classrooms', {
+  addChapter: async (courseId, title, description) => {
+    await fetch('/api/course/chapters', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ courseId, classroomId }),
+      body: JSON.stringify({ courseId, title, description }),
     });
     await get().fetchCourse(courseId);
   },
 
-  removeClassroom: async (courseId, classroomId) => {
-    await fetch('/api/course/classrooms', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ courseId, classroomId }),
-    });
-    await get().fetchCourse(courseId);
-  },
-
-  reorderClassrooms: async (courseId, newOrder) => {
-    await fetch('/api/course/classrooms', {
+  updateChapter: async (courseId, chapterId, updates) => {
+    await fetch('/api/course/chapters', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ courseId, newOrder }),
+      body: JSON.stringify({ courseId, chapterId, ...updates }),
+    });
+    await get().fetchCourse(courseId);
+  },
+
+  removeChapter: async (courseId, chapterId) => {
+    await fetch('/api/course/chapters', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ courseId, chapterId }),
+    });
+    await get().fetchCourse(courseId);
+  },
+
+  reorderChapters: async (courseId, chapterIds) => {
+    await fetch('/api/course/chapters', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ courseId, chapterIds }),
     });
     await get().fetchCourse(courseId);
   },

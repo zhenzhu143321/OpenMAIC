@@ -32,6 +32,7 @@ import { useTheme } from '@/lib/hooks/use-theme';
 import { nanoid } from 'nanoid';
 import { storePdfBlob } from '@/lib/utils/image-storage';
 import type { UserRequirements } from '@/lib/types/generation';
+import { COURSE_CHAPTER_CONTEXT_KEY, type CourseChapterContext } from '@/lib/types/course';
 import { useSettingsStore } from '@/lib/store/settings';
 import { useUserProfileStore, AVATAR_OPTIONS } from '@/lib/store/user-profile';
 import {
@@ -195,7 +196,15 @@ function HomePage() {
         setPublicClassrooms(publicData.classrooms);
         const thumbs: Record<string, Slide> = {};
         for (const c of publicData.classrooms) {
-          if (c.firstSlide) thumbs[c.id] = c.firstSlide;
+          if (c.firstSlide) {
+            const slide = structuredClone(c.firstSlide);
+            for (const el of slide.elements as Array<{ type: string; src?: string }>) {
+              if (el.type === 'image' && el.src && /^gen_(img|vid)_[\w-]+$/i.test(el.src)) {
+                el.src = `/api/classroom/media?id=${encodeURIComponent(c.id)}&file=${encodeURIComponent(el.src)}`;
+              }
+            }
+            thumbs[c.id] = slide;
+          }
         }
         setPublicThumbnails(thumbs);
       }
@@ -322,6 +331,19 @@ function HomePage() {
         currentStep: 'generating' as const,
       };
       sessionStorage.setItem('generationSession', JSON.stringify(sessionState));
+      // If there is a stale context (stageId already set from a prior generation),
+      // remove it so this new generation starts fresh without an accidental chapter binding.
+      try {
+        const ctxStr = sessionStorage.getItem(COURSE_CHAPTER_CONTEXT_KEY);
+        if (ctxStr) {
+          const ctx = JSON.parse(ctxStr) as CourseChapterContext;
+          if (ctx.stageId !== null) {
+            sessionStorage.removeItem(COURSE_CHAPTER_CONTEXT_KEY);
+          }
+        }
+      } catch {
+        sessionStorage.removeItem(COURSE_CHAPTER_CONTEXT_KEY);
+      }
 
       router.push('/generation-preview');
     } catch (err) {
@@ -704,19 +726,33 @@ function HomePage() {
           </div>
 
           {/* Courses tab */}
-          {activeTab === 'courses' && courses.length > 0 && (
-            <div className="w-full grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {courses.map((course) => (
-                <div
-                  key={course.id}
-                  onClick={() => router.push(`/course/${course.id}`)}
-                  className="border rounded p-4 cursor-pointer hover:shadow-lg transition-shadow"
+          {activeTab === 'courses' && (
+            <div className="w-full">
+              <div className="flex justify-end mb-3">
+                <button
+                  onClick={() => router.push('/course')}
+                  className="px-3 py-1.5 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition-colors"
                 >
-                  <h3 className="font-semibold">{course.name}</h3>
-                  <p className="text-sm text-gray-600">{course.college}</p>
-                  <p className="text-xs text-gray-500 mt-2">{course.classroomCount} {t('course.classroomCount')}</p>
+                  {t('course.manage')}
+                </button>
+              </div>
+              {courses.length === 0 ? (
+                <p className="text-center text-gray-500 py-8">{t('course.noCourses')}</p>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {courses.map((course) => (
+                    <div
+                      key={course.id}
+                      onClick={() => router.push(`/course/${course.id}`)}
+                      className="border rounded p-4 cursor-pointer hover:shadow-lg transition-shadow"
+                    >
+                      <h3 className="font-semibold">{course.name}</h3>
+                      <p className="text-sm text-gray-600">{course.college}</p>
+                      <p className="text-xs text-gray-500 mt-2">{course.chapterCount} {t('course.chapterCount')}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           )}
 
