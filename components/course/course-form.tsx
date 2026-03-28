@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useI18n } from '@/lib/hooks/use-i18n';
 import type { CourseFormData } from '@/lib/types/course';
 
@@ -12,6 +12,11 @@ interface CourseFormProps {
 
 export function CourseForm({ initialData, onSubmit, onCancel }: CourseFormProps) {
   const { t } = useI18n();
+  const nameId = useId();
+  const collegeId = useId();
+  const majorId = useId();
+  const descriptionId = useId();
+  const teacherNameId = useId();
   const [formData, setFormData] = useState({
     name: initialData?.name || '',
     college: initialData?.college || '',
@@ -28,9 +33,14 @@ export function CourseForm({ initialData, onSubmit, onCancel }: CourseFormProps)
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm mb-1">{t('course.name')}</label>
+        <label htmlFor={nameId} className="block text-sm mb-1">
+          {t('course.name')}
+        </label>
         <input
+          id={nameId}
+          name="name"
           type="text"
+          autoComplete="off"
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           className="w-full px-3 py-2 border rounded"
@@ -38,9 +48,14 @@ export function CourseForm({ initialData, onSubmit, onCancel }: CourseFormProps)
         />
       </div>
       <div>
-        <label className="block text-sm mb-1">{t('course.college')}</label>
+        <label htmlFor={collegeId} className="block text-sm mb-1">
+          {t('course.college')}
+        </label>
         <input
+          id={collegeId}
+          name="college"
           type="text"
+          autoComplete="organization"
           value={formData.college}
           onChange={(e) => setFormData({ ...formData, college: e.target.value })}
           className="w-full px-3 py-2 border rounded"
@@ -48,9 +63,14 @@ export function CourseForm({ initialData, onSubmit, onCancel }: CourseFormProps)
         />
       </div>
       <div>
-        <label className="block text-sm mb-1">{t('course.major')}</label>
+        <label htmlFor={majorId} className="block text-sm mb-1">
+          {t('course.major')}
+        </label>
         <input
+          id={majorId}
+          name="major"
           type="text"
+          autoComplete="off"
           value={formData.major}
           onChange={(e) => setFormData({ ...formData, major: e.target.value })}
           className="w-full px-3 py-2 border rounded"
@@ -58,8 +78,13 @@ export function CourseForm({ initialData, onSubmit, onCancel }: CourseFormProps)
         />
       </div>
       <div>
-        <label className="block text-sm mb-1">{t('course.description')}</label>
+        <label htmlFor={descriptionId} className="block text-sm mb-1">
+          {t('course.description')}
+        </label>
         <textarea
+          id={descriptionId}
+          name="description"
+          autoComplete="off"
           value={formData.description}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
           className="w-full px-3 py-2 border rounded"
@@ -68,9 +93,14 @@ export function CourseForm({ initialData, onSubmit, onCancel }: CourseFormProps)
         />
       </div>
       <div>
-        <label className="block text-sm mb-1">{t('course.teacherName')}</label>
+        <label htmlFor={teacherNameId} className="block text-sm mb-1">
+          {t('course.teacherName')}
+        </label>
         <input
+          id={teacherNameId}
+          name="teacherName"
           type="text"
+          autoComplete="name"
           value={formData.teacherName}
           onChange={(e) => setFormData({ ...formData, teacherName: e.target.value })}
           className="w-full px-3 py-2 border rounded"

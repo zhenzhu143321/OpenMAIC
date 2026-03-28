@@ -50,13 +50,18 @@ export default function CoursePage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {courses.map((course) => (
             <div key={course.id} className="border rounded p-4 hover:shadow-lg transition-shadow cursor-pointer">
-              <div onClick={() => router.push(`/course/${course.id}`)}>
+              <button
+                type="button"
+                onClick={() => router.push(`/course/${course.id}`)}
+                className="w-full text-left rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                aria-label={`${t('course.myCourses')}: ${course.name}`}
+              >
                 <h2 className="text-xl mb-2">{course.name}</h2>
                 <p className="text-sm text-gray-600">{course.college} - {course.major}</p>
                 <p className="text-sm text-gray-500 mt-2">{course.description}</p>
                 <p className="text-sm mt-2">{t('course.teacherName')}: {course.teacherName}</p>
                 <p className="text-sm text-gray-500">{t('course.chapterCount')}: {course.chapterCount}</p>
-              </div>
+              </button>
               <button onClick={() => handleDelete(course.id)} className="mt-2 text-red-500 text-sm">
                 {t('course.delete')}
               </button>
