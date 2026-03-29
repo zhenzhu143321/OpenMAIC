@@ -98,11 +98,12 @@ export const useCourseStore = create<CourseState>((set, get) => ({
       publishedAt: course.publishedAt ?? new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    await fetch('/api/course', {
+    const res = await fetch('/api/course', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updated),
     });
+    if (!res.ok) throw new Error('Publish failed');
     set({ currentCourse: updated });
     await get().fetchCourses();
   },
@@ -112,11 +113,12 @@ export const useCourseStore = create<CourseState>((set, get) => ({
     if (!course || course.id !== id) return;
     const { publishedAt: _removed, ...rest } = course;
     const updated: Course = { ...rest, status: 'draft', updatedAt: new Date().toISOString() };
-    await fetch('/api/course', {
+    const res = await fetch('/api/course', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updated),
     });
+    if (!res.ok) throw new Error('Unpublish failed');
     set({ currentCourse: updated });
     await get().fetchCourses();
   },

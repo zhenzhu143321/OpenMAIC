@@ -55,6 +55,10 @@ export const courseZhCN = {
     publishedCourses: '公共课程',
     noPublishedCourses: '暂无公共课程',
     chaptersReady: '已绑定',
+    publishSuccess: '课程已发布',
+    publishFailed: '发布失败',
+    unpublishSuccess: '已取消发布',
+    unpublishFailed: '取消发布失败',
   },
 };
 
@@ -115,5 +119,9 @@ export const courseEnUS = {
     publishedCourses: 'Public Courses',
     noPublishedCourses: 'No public courses yet',
     chaptersReady: 'bound',
+    publishSuccess: 'Course published',
+    publishFailed: 'Failed to publish',
+    unpublishSuccess: 'Course unpublished',
+    unpublishFailed: 'Failed to unpublish',
   },
 };

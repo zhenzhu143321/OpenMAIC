@@ -149,6 +149,7 @@ function HomePage() {
   const [publicClassrooms, setPublicClassrooms] = useState<PublicClassroomItem[]>([]);
   const [publicThumbnails, setPublicThumbnails] = useState<Record<string, Slide>>({});
   const [publishedCourses, setPublishedCourses] = useState<CourseListItem[]>([]);
+  const [classroomsExpanded, setClassroomsExpanded] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -222,6 +223,7 @@ function HomePage() {
       }
       if (Array.isArray(publishedCourseData)) {
         setPublishedCourses(publishedCourseData);
+        if (publishedCourseData.length === 0) setClassroomsExpanded(true);
       }
     }).catch(() => {});
   }, []);
@@ -759,32 +761,49 @@ function HomePage() {
           transition={{ delay: 0.45 }}
           className="relative z-10 mt-10 w-full max-w-6xl flex flex-col items-center"
         >
-          <div className="w-full flex items-center gap-4 py-2">
+          <button
+            onClick={() => setClassroomsExpanded((v) => !v)}
+            className="w-full flex items-center gap-4 py-2 cursor-pointer group"
+          >
             <div className="flex-1 h-px bg-border/40" />
-            <span className="shrink-0 flex items-center gap-2 text-[13px] text-muted-foreground/60 select-none">
+            <span className="shrink-0 flex items-center gap-2 text-[13px] text-muted-foreground/60 select-none group-hover:text-muted-foreground/80 transition-colors">
               <Globe className="size-3.5" />
               {t('classroom.publicClassrooms')}
               <span className="text-[11px] tabular-nums opacity-60">{publicClassrooms.length}</span>
+              {classroomsExpanded ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
             </span>
             <div className="flex-1 h-px bg-border/40" />
-          </div>
+          </button>
 
-          <div className="pt-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-8 w-full">
-            {publicClassrooms.map((pc, i) => (
+          <AnimatePresence>
+            {classroomsExpanded && (
               <motion.div
-                key={pc.id}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.04, duration: 0.35, ease: 'easeOut' }}
+                key="classrooms-grid"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.25, ease: 'easeOut' }}
+                className="w-full overflow-hidden"
               >
-                <PublicClassroomCard
-                  classroom={pc}
-                  slide={publicThumbnails[pc.id]}
-                  onClick={() => router.push(`/classroom/${pc.id}`)}
-                />
+                <div className="pt-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-8 w-full">
+                  {publicClassrooms.map((pc, i) => (
+                    <motion.div
+                      key={pc.id}
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.04, duration: 0.35, ease: 'easeOut' }}
+                    >
+                      <PublicClassroomCard
+                        classroom={pc}
+                        slide={publicThumbnails[pc.id]}
+                        onClick={() => router.push(`/classroom/${pc.id}`)}
+                      />
+                    </motion.div>
+                  ))}
+                </div>
               </motion.div>
-            ))}
-          </div>
+            )}
+          </AnimatePresence>
         </motion.div>
       )}
 

@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ArrowLeft, Pencil, BookOpen, Building2, GraduationCap, User, Globe, GlobeLock } from 'lucide-react';
+import { toast } from 'sonner';
 
 type PublishDialogMode = 'publish' | 'unpublish' | null;
 
@@ -130,8 +131,17 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
 
   const handlePublishConfirm = async () => {
     if (!courseId) return;
-    if (publishDialog === 'publish') await publishCourse(courseId);
-    else if (publishDialog === 'unpublish') await unpublishCourse(courseId);
+    try {
+      if (publishDialog === 'publish') {
+        await publishCourse(courseId);
+        toast.success(t('course.publishSuccess'));
+      } else if (publishDialog === 'unpublish') {
+        await unpublishCourse(courseId);
+        toast.success(t('course.unpublishSuccess'));
+      }
+    } catch {
+      toast.error(publishDialog === 'publish' ? t('course.publishFailed') : t('course.unpublishFailed'));
+    }
     setPublishDialog(null);
   };
 
