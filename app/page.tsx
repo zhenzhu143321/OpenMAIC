@@ -809,6 +809,10 @@ function HomePage() {
           {/* Standalone classrooms tab */}
           {activeTab === 'standalone' && (
             <>
+              {/* Browser-local hint */}
+              <p className="w-full text-center text-[11px] text-muted-foreground/50 mb-3">
+                {t('course.localClassroomHint')}
+              </p>
               {/* Trigger — divider-line with centered text */}
               <button
             onClick={() => {

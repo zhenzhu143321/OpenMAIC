@@ -8,8 +8,8 @@ export const generationZhCN = {
     nameCopied: '课堂名称已复制',
     deleteConfirmTitle: '删除课堂',
     delete: '删除',
-    publicClassrooms: '公共课程',
-    noPublicClassrooms: '暂无公共课程',
+    publicClassrooms: '已发布课堂',
+    noPublicClassrooms: '暂无已发布课堂',
   },
   upload: {
     pdfSizeLimit: '支持最大50MB的PDF文件',
@@ -74,8 +74,8 @@ export const generationEnUS = {
     nameCopied: 'Name copied',
     deleteConfirmTitle: 'Delete',
     delete: 'Delete',
-    publicClassrooms: 'Public Classrooms',
-    noPublicClassrooms: 'No public classrooms yet',
+    publicClassrooms: 'Published Classrooms',
+    noPublicClassrooms: 'No published classrooms yet',
   },
   upload: {
     pdfSizeLimit: 'Supports PDF files up to 50MB',
