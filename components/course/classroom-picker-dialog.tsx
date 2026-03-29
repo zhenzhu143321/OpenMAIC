@@ -1,6 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { motion } from 'motion/react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useI18n } from '@/lib/hooks/use-i18n';
+import { cn } from '@/lib/utils';
 
 interface PublishedClassroom {
   id: string;
@@ -16,6 +27,7 @@ interface ClassroomPickerDialogProps {
 }
 
 export function ClassroomPickerDialog({ usedClassroomIds, onSelect, onClose }: ClassroomPickerDialogProps) {
+  const { t } = useI18n();
   const [classrooms, setClassrooms] = useState<PublishedClassroom[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -48,41 +60,52 @@ export function ClassroomPickerDialog({ usedClassroomIds, onSelect, onClose }: C
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
-      <div
-        className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[70vh] flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between px-5 py-4 border-b">
-          <h2 className="text-base font-semibold">选择已发布课堂</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none">
-            ×
-          </button>
-        </div>
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t('course.selectClassroom')}</DialogTitle>
+          <DialogDescription className="sr-only">
+            {t('course.noAvailableClassrooms')}
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="overflow-y-auto flex-1 px-3 py-2">
+        <ScrollArea className="max-h-[60vh] -mx-1 px-1">
           {loading ? (
-            <p className="text-center text-gray-500 py-8 text-sm">加载中…</p>
-          ) : classrooms.length === 0 ? (
-            <p className="text-center text-gray-500 py-8 text-sm">暂无可绑定的已发布课堂</p>
-          ) : (
-            <ul className="space-y-1.5">
-              {classrooms.map((c) => (
-                <li key={c.id}>
-                  <button
-                    disabled={submitting}
-                    onClick={() => handleSelect(c.id)}
-                    className="w-full text-left px-4 py-3 rounded-lg border hover:border-blue-400 hover:bg-blue-50 transition-colors disabled:opacity-50"
-                  >
-                    <div className="font-medium text-sm">{c.name}</div>
-                    <div className="text-xs text-gray-500 mt-0.5">{c.sceneCount} 个场景</div>
-                  </button>
-                </li>
+            <div className="space-y-2 py-1">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="h-16 rounded-lg bg-muted animate-pulse" />
               ))}
-            </ul>
+            </div>
+          ) : classrooms.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8 text-sm">
+              {t('course.noAvailableClassrooms')}
+            </p>
+          ) : (
+            <div className="space-y-1.5 py-1">
+              {classrooms.map((c, i) => (
+                <motion.button
+                  key={c.id}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.04, duration: 0.2 }}
+                  disabled={submitting}
+                  onClick={() => handleSelect(c.id)}
+                  className={cn(
+                    'w-full text-left px-4 py-3 rounded-lg border border-border/40',
+                    'hover:border-primary/40 hover:bg-primary/5 transition-all duration-150',
+                    'disabled:opacity-50 disabled:cursor-not-allowed',
+                  )}
+                >
+                  <div className="font-medium text-sm text-foreground">{c.name}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    {c.sceneCount} {t('course.scenes')}
+                  </div>
+                </motion.button>
+              ))}
+            </div>
           )}
-        </div>
-      </div>
-    </div>
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
   );
 }

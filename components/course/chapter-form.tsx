@@ -2,6 +2,9 @@
 
 import { useId, useState } from 'react';
 import { useI18n } from '@/lib/hooks/use-i18n';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 
 interface ChapterFormProps {
   initialTitle?: string;
@@ -25,44 +28,34 @@ export function ChapterForm({ initialTitle = '', initialDescription = '', onSubm
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
-      <div>
-        <label htmlFor={titleId} className="block text-sm font-medium mb-1">
-          {t('course.chapterTitle')}
-        </label>
-        <input
+      <div className="space-y-1.5">
+        <Label htmlFor={titleId}>{t('course.chapterTitle')}</Label>
+        <Input
           id={titleId}
           name="title"
           type="text"
           autoComplete="off"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="w-full px-3 py-2 border rounded text-sm"
           autoFocus
           required
         />
       </div>
-      <div>
-        <label htmlFor={descriptionId} className="block text-sm font-medium mb-1">
-          {t('course.chapterDescription')}
-        </label>
-        <input
+      <div className="space-y-1.5">
+        <Label htmlFor={descriptionId}>{t('course.chapterDescription')}</Label>
+        <Input
           id={descriptionId}
           name="description"
           type="text"
           autoComplete="off"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="w-full px-3 py-2 border rounded text-sm"
-          placeholder="（可选）"
+          placeholder={t('course.chapterDescriptionOptional')}
         />
       </div>
-      <div className="flex gap-2">
-        <button type="submit" className="px-3 py-1.5 bg-blue-500 text-white text-sm rounded hover:bg-blue-600">
-          {t('common.confirm')}
-        </button>
-        <button type="button" onClick={onCancel} className="px-3 py-1.5 border text-sm rounded hover:bg-gray-50">
-          {t('common.cancel')}
-        </button>
+      <div className="flex gap-2 pt-1">
+        <Button type="submit" size="sm">{t('common.confirm')}</Button>
+        <Button type="button" variant="outline" size="sm" onClick={onCancel}>{t('common.cancel')}</Button>
       </div>
     </form>
   );
