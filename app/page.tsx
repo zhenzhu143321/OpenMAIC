@@ -19,6 +19,8 @@ import {
   Monitor,
   BotOff,
   ChevronUp,
+  BookOpen,
+  GraduationCap,
 } from 'lucide-react';
 import { useI18n } from '@/lib/hooks/use-i18n';
 import { createLogger } from '@/lib/logger';
@@ -703,12 +705,14 @@ function HomePage() {
           className="relative z-10 mt-10 w-full max-w-6xl flex flex-col items-center"
         >
           {/* Tab buttons */}
-          <div className="flex gap-4 mb-4">
+          <div className="flex gap-2 mb-4 p-1 rounded-full bg-muted/60 backdrop-blur-sm">
             <button
               onClick={() => setActiveTab('courses')}
               className={cn(
-                'px-4 py-2 rounded transition-colors',
-                activeTab === 'courses' ? 'bg-blue-500 text-white' : 'bg-gray-200'
+                'px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200',
+                activeTab === 'courses'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground',
               )}
             >
               {t('course.myCourses')} ({courses.length})
@@ -716,8 +720,10 @@ function HomePage() {
             <button
               onClick={() => setActiveTab('standalone')}
               className={cn(
-                'px-4 py-2 rounded transition-colors',
-                activeTab === 'standalone' ? 'bg-blue-500 text-white' : 'bg-gray-200'
+                'px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200',
+                activeTab === 'standalone'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground',
               )}
             >
               {t('course.standaloneClassrooms')} ({classrooms.length})
@@ -728,28 +734,66 @@ function HomePage() {
           {activeTab === 'courses' && (
             <div className="w-full">
               <div className="flex justify-end mb-3">
-                <button
-                  onClick={() => router.push('/course')}
-                  className="px-3 py-1.5 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition-colors"
-                >
+                <Button variant="outline" size="sm" onClick={() => router.push('/course')}>
                   {t('course.manage')}
-                </button>
+                </Button>
               </div>
               {courses.length === 0 ? (
-                <p className="text-center text-gray-500 py-8">{t('course.noCourses')}</p>
+                <p className="text-center text-muted-foreground py-8 text-sm">{t('course.noCourses')}</p>
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {courses.map((course) => (
-                    <div
-                      key={course.id}
-                      onClick={() => router.push(`/course/${course.id}`)}
-                      className="border rounded p-4 cursor-pointer hover:shadow-lg transition-shadow"
-                    >
-                      <h3 className="font-semibold">{course.name}</h3>
-                      <p className="text-sm text-gray-600">{course.college}</p>
-                      <p className="text-xs text-gray-500 mt-2">{course.chapterCount} {t('course.chapterCount')}</p>
-                    </div>
-                  ))}
+                  {courses.map((course) => {
+                    // Deterministic accent per course id
+                    const COVERS = [
+                      { from: '#7c3aed', to: '#a78bfa', dot: 'rgba(255,255,255,0.15)' },
+                      { from: '#0ea5e9', to: '#38bdf8', dot: 'rgba(255,255,255,0.15)' },
+                      { from: '#059669', to: '#34d399', dot: 'rgba(255,255,255,0.15)' },
+                      { from: '#e11d48', to: '#fb7185', dot: 'rgba(255,255,255,0.15)' },
+                      { from: '#d97706', to: '#fbbf24', dot: 'rgba(255,255,255,0.15)' },
+                      { from: '#0d9488', to: '#2dd4bf', dot: 'rgba(255,255,255,0.15)' },
+                      { from: '#c026d3', to: '#e879f9', dot: 'rgba(255,255,255,0.15)' },
+                      { from: '#ea580c', to: '#fb923c', dot: 'rgba(255,255,255,0.15)' },
+                    ];
+                    const hash = course.id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+                    const cover = COVERS[hash % COVERS.length];
+                    return (
+                      <div
+                        key={course.id}
+                        onClick={() => router.push(`/course/${course.id}`)}
+                        className="group rounded-2xl overflow-hidden cursor-pointer border border-white/10 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-250 flex flex-col"
+                        style={{ minHeight: '200px' }}
+                      >
+                        {/* Cover area */}
+                        <div
+                          className="relative flex-shrink-0 h-[88px] flex items-end px-4 pb-3 overflow-hidden"
+                          style={{ background: `linear-gradient(135deg, ${cover.from}, ${cover.to})` }}
+                        >
+                          {/* Decorative circles */}
+                          <div className="absolute -top-4 -right-4 w-20 h-20 rounded-full" style={{ background: cover.dot }} />
+                          <div className="absolute top-2 right-10 w-10 h-10 rounded-full" style={{ background: cover.dot }} />
+                          <div className="absolute -bottom-6 -left-4 w-24 h-24 rounded-full" style={{ background: cover.dot }} />
+                          {/* Chapter badge */}
+                          <span className="relative z-10 inline-flex items-center gap-1 text-[10px] font-semibold bg-white/20 backdrop-blur-sm text-white px-2 py-0.5 rounded-full border border-white/30">
+                            <BookOpen className="size-2.5" />
+                            {course.chapterCount} {t('course.chapter')}
+                          </span>
+                        </div>
+
+                        {/* Info area */}
+                        <div className="flex-1 flex flex-col bg-white dark:bg-slate-900 px-4 pt-3 pb-3.5 min-h-0">
+                          <h3 className="text-[13px] font-semibold text-foreground leading-snug line-clamp-2 mb-auto">
+                            {course.name}
+                          </h3>
+                          <div className="mt-2.5 flex items-center gap-1.5 min-w-0">
+                            <GraduationCap className="size-3 flex-shrink-0" style={{ color: cover.from }} />
+                            <span className="text-[11px] text-muted-foreground truncate">
+                              {course.college} · {course.major}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

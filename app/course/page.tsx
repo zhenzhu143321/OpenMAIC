@@ -5,10 +5,9 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'motion/react';
 import { useI18n } from '@/lib/hooks/use-i18n';
 import { useCourseStore } from '@/lib/store/course';
+import type { CourseListItem } from '@/lib/types/course';
 import { CourseForm } from '@/components/course/course-form';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -20,7 +19,115 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
-import { Plus, BookOpen, User, Trash2 } from 'lucide-react';
+import { Plus, BookOpen, Trash2, GraduationCap, User } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+const COVERS = [
+  { from: '#7c3aed', to: '#a78bfa' },
+  { from: '#0ea5e9', to: '#38bdf8' },
+  { from: '#059669', to: '#34d399' },
+  { from: '#e11d48', to: '#fb7185' },
+  { from: '#d97706', to: '#fbbf24' },
+  { from: '#0d9488', to: '#2dd4bf' },
+  { from: '#c026d3', to: '#e879f9' },
+  { from: '#ea580c', to: '#fb923c' },
+];
+
+function coverFor(id: string) {
+  const hash = id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return COVERS[hash % COVERS.length];
+}
+
+interface CourseCardProps {
+  course: CourseListItem;
+  index: number;
+  onOpen: () => void;
+  onDelete: () => void;
+  chapterLabel: string;
+}
+
+function CourseCard({ course, index, onOpen, onDelete, chapterLabel }: CourseCardProps) {
+  const cover = coverFor(course.id);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 22 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.055, duration: 0.38, ease: [0.25, 0.46, 0.45, 0.94] }}
+    >
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onOpen}
+        onKeyDown={(e) => e.key === 'Enter' && onOpen()}
+        className={cn(
+          'group rounded-2xl overflow-hidden cursor-pointer flex flex-col',
+          'border border-white/10 shadow-md hover:shadow-2xl',
+          'hover:-translate-y-1.5 transition-all duration-300',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
+        )}
+        style={{ minHeight: '220px' }}
+      >
+        {/* Cover area */}
+        <div
+          className="relative flex-shrink-0 h-[110px] overflow-hidden flex flex-col justify-between p-4"
+          style={{ background: `linear-gradient(135deg, ${cover.from}, ${cover.to})` }}
+        >
+          {/* Geometric decorations */}
+          <div
+            className="absolute -top-6 -right-6 w-28 h-28 rounded-full opacity-20"
+            style={{ background: 'rgba(255,255,255,0.4)' }}
+          />
+          <div
+            className="absolute bottom-0 right-8 w-16 h-16 rounded-full opacity-15"
+            style={{ background: 'rgba(255,255,255,0.5)' }}
+          />
+          <div
+            className="absolute -bottom-8 -left-4 w-32 h-32 rounded-full opacity-10"
+            style={{ background: 'rgba(255,255,255,0.6)' }}
+          />
+          {/* Top row: chapter badge + delete */}
+          <div className="relative z-10 flex items-center justify-between">
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-white/20 backdrop-blur-sm text-white px-2 py-0.5 rounded-full border border-white/30">
+              <BookOpen className="size-2.5" />
+              {course.chapterCount} {chapterLabel}
+            </span>
+            <button
+              className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white/15 hover:bg-white/30 backdrop-blur-sm text-white p-1 rounded-lg"
+              onClick={(e) => { e.stopPropagation(); onDelete(); }}
+              aria-label="删除课程"
+            >
+              <Trash2 className="size-3" />
+            </button>
+          </div>
+          {/* Bottom: teacher name */}
+          <div className="relative z-10 flex items-center gap-1">
+            <User className="size-2.5 text-white/70 flex-shrink-0" />
+            <span className="text-[11px] text-white/80 font-medium truncate">{course.teacherName}</span>
+          </div>
+        </div>
+
+        {/* Info area */}
+        <div className="flex-1 flex flex-col bg-white dark:bg-slate-900 px-4 pt-3.5 pb-4 min-h-0">
+          <h2 className="text-[14px] font-semibold text-foreground leading-snug line-clamp-2 mb-auto tracking-tight">
+            {course.name}
+          </h2>
+          {course.description && (
+            <p className="text-[11px] text-muted-foreground line-clamp-1 mt-1.5">
+              {course.description}
+            </p>
+          )}
+          <div className="mt-2.5 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center gap-1.5 min-w-0">
+            <GraduationCap className="size-3 flex-shrink-0" style={{ color: cover.from }} />
+            <span className="text-[11px] text-muted-foreground truncate">
+              {course.college} · {course.major}
+            </span>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
 
 export default function CoursePage() {
   const { t } = useI18n();
@@ -86,59 +193,16 @@ export default function CoursePage() {
             </Button>
           </motion.div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {courses.map((course, i) => (
-              <motion.div
+              <CourseCard
                 key={course.id}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05, duration: 0.35, ease: 'easeOut' }}
-              >
-                <Card
-                  className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm border-border/40 hover:shadow-lg hover:shadow-violet-500/[0.06] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer group"
-                  onClick={() => router.push(`/course/${course.id}`)}
-                >
-                  <CardHeader>
-                    <CardTitle className="text-base leading-snug line-clamp-2">
-                      {course.name}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex flex-wrap gap-1.5">
-                      <Badge variant="secondary" className="text-xs font-normal">
-                        {course.college}
-                      </Badge>
-                      <Badge variant="secondary" className="text-xs font-normal">
-                        {course.major}
-                      </Badge>
-                    </div>
-                    {course.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-2">{course.description}</p>
-                    )}
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <User className="size-3.5" />
-                      <span>{course.teacherName}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <BookOpen className="size-3.5" />
-                      <span>{course.chapterCount} {t('course.chapter')}</span>
-                    </div>
-                  </CardContent>
-                  <CardFooter className="border-t border-border/30 pt-3">
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      className="ml-auto text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeletingId(course.id);
-                      }}
-                    >
-                      <Trash2 />
-                    </Button>
-                  </CardFooter>
-                </Card>
-              </motion.div>
+                course={course}
+                index={i}
+                onOpen={() => router.push(`/course/${course.id}`)}
+                onDelete={() => setDeletingId(course.id)}
+                chapterLabel={t('course.chapter')}
+              />
             ))}
           </div>
         )}
