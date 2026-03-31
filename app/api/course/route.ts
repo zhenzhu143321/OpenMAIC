@@ -34,9 +34,9 @@ export async function POST(req: NextRequest) {
       if (!body.chapters || body.chapters.length === 0) {
         return NextResponse.json({ error: 'Course must have at least one chapter to publish' }, { status: 400 });
       }
-      const unbound = body.chapters.filter((ch) => !ch.classroomId);
-      if (unbound.length > 0) {
-        return NextResponse.json({ error: 'All chapters must have a bound classroom to publish' }, { status: 400 });
+      const bound = body.chapters.filter((ch) => ch.classroomId);
+      if (bound.length === 0) {
+        return NextResponse.json({ error: 'At least one chapter must have a bound classroom to publish' }, { status: 400 });
       }
     }
     await persistCourse(body);

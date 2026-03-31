@@ -68,7 +68,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
             .filter((c) => idSet.has(c.id))
             .map((c): [string, ClassroomMeta] => [
               c.id,
-              { name: c.name || c.id, sceneCount: c.sceneCount ?? 0, published: true },
+              { name: c.name || c.id, sceneCount: c.sceneCount ?? 0, ready: true },
             ]),
         ),
       );
@@ -104,7 +104,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
 
   const canPublish =
     currentCourse.chapters.length > 0 &&
-    currentCourse.chapters.every((ch) => !!ch.classroomId);
+    currentCourse.chapters.some((ch) => !!ch.classroomId);
   const boundCount = currentCourse.chapters.filter((ch) => !!ch.classroomId).length;
   const totalCount = currentCourse.chapters.length;
   const isPublished = currentCourse.status === 'published';

@@ -58,16 +58,6 @@ const WEB_SEARCH_STORAGE_KEY = 'webSearchEnabled';
 const LANGUAGE_STORAGE_KEY = 'generationLanguage';
 const RECENT_OPEN_STORAGE_KEY = 'recentClassroomsOpen';
 
-interface PublicClassroomItem {
-  id: string;
-  name: string;
-  description?: string;
-  language?: string;
-  sceneCount: number;
-  createdAt: string;
-  firstSlide?: Slide | null;
-}
-
 interface FormState {
   pdfFile: File | null;
   requirement: string;
@@ -162,10 +152,7 @@ function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [classrooms, setClassrooms] = useState<StageListItem[]>([]);
   const [thumbnails, setThumbnails] = useState<Record<string, Slide>>({});
-  const [publicClassrooms, setPublicClassrooms] = useState<PublicClassroomItem[]>([]);
-  const [publicThumbnails, setPublicThumbnails] = useState<Record<string, Slide>>({});
   const [publishedCourses, setPublishedCourses] = useState<CourseListItem[]>([]);
-  const [classroomsExpanded, setClassroomsExpanded] = useState(true);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -218,28 +205,10 @@ function HomePage() {
     Promise.all([
       loadClassrooms(),
       fetchCourses(),
-      fetch('/api/classroom').then(res => res.json()),
       fetch('/api/course?status=published').then(res => res.json()),
-    ]).then(([, , publicData, publishedCourseData]) => {
-      if (publicData.success && publicData.classrooms) {
-        setPublicClassrooms(publicData.classrooms);
-        const thumbs: Record<string, Slide> = {};
-        for (const c of publicData.classrooms) {
-          if (c.firstSlide) {
-            const slide = structuredClone(c.firstSlide);
-            for (const el of slide.elements as Array<{ type: string; src?: string }>) {
-              if (el.type === 'image' && el.src && /^gen_(img|vid)_[\w-]+$/i.test(el.src)) {
-                el.src = `/api/classroom/media?id=${encodeURIComponent(c.id)}&file=${encodeURIComponent(el.src)}`;
-              }
-            }
-            thumbs[c.id] = slide;
-          }
-        }
-        setPublicThumbnails(thumbs);
-      }
+    ]).then(([, , publishedCourseData]) => {
       if (Array.isArray(publishedCourseData)) {
         setPublishedCourses(publishedCourseData);
-        if (publishedCourseData.length > 0) setClassroomsExpanded(false);
       }
     }).catch(() => {});
   }, []);
@@ -573,7 +542,7 @@ function HomePage() {
         transition={{ duration: 0.6, ease: 'easeOut' }}
         className={cn(
           'relative z-20 w-full max-w-[800px] flex flex-col items-center',
-          classrooms.length === 0 && publicClassrooms.length === 0 ? 'justify-center min-h-[calc(100dvh-8rem)]' : 'mt-[10vh]',
+          classrooms.length === 0 ? 'justify-center min-h-[calc(100dvh-8rem)]' : 'mt-[10vh]',
         )}
       >
         {/* ── Logo ── */}
@@ -755,60 +724,6 @@ function HomePage() {
               );
             })}
           </div>
-        </motion.div>
-      )}
-
-      {/* ═══ Public classrooms ═══ */}
-      {publicClassrooms.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.45 }}
-          className="relative z-10 mt-10 w-full max-w-6xl flex flex-col items-center"
-        >
-          <button
-            onClick={() => setClassroomsExpanded((v) => !v)}
-            className="w-full flex items-center gap-4 py-2 cursor-pointer group"
-          >
-            <div className="flex-1 h-px bg-border/40" />
-            <span className="shrink-0 flex items-center gap-2 text-[13px] text-muted-foreground/60 select-none group-hover:text-muted-foreground/80 transition-colors">
-              <Globe className="size-3.5" />
-              {t('classroom.publicClassrooms')}
-              <span className="text-[11px] tabular-nums opacity-60">{publicClassrooms.length}</span>
-              {classroomsExpanded ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
-            </span>
-            <div className="flex-1 h-px bg-border/40" />
-          </button>
-
-          <AnimatePresence>
-            {classroomsExpanded && (
-              <motion.div
-                key="classrooms-grid"
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.25, ease: 'easeOut' }}
-                className="w-full overflow-hidden"
-              >
-                <div className="pt-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-8 w-full">
-                  {publicClassrooms.map((pc, i) => (
-                    <motion.div
-                      key={pc.id}
-                      initial={{ opacity: 0, y: 16 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.04, duration: 0.35, ease: 'easeOut' }}
-                    >
-                      <PublicClassroomCard
-                        classroom={pc}
-                        slide={publicThumbnails[pc.id]}
-                        onClick={() => router.push(`/classroom/${pc.id}`)}
-                      />
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </motion.div>
       )}
 
@@ -1277,86 +1192,6 @@ function GreetingBar() {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
-  );
-}
-
-// ─── Public Classroom Card — no delete button ───────────────────
-function PublicClassroomCard({
-  classroom,
-  slide,
-  onClick,
-}: {
-  classroom: PublicClassroomItem;
-  slide?: Slide;
-  onClick: () => void;
-}) {
-  const { t } = useI18n();
-  const thumbRef = useRef<HTMLDivElement>(null);
-  const [thumbWidth, setThumbWidth] = useState(0);
-
-  useEffect(() => {
-    const el = thumbRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(([entry]) => {
-      setThumbWidth(Math.round(entry.contentRect.width));
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
-  const formatCreatedAt = (iso: string) => {
-    const date = new Date(iso);
-    const now = new Date();
-    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-    if (diffDays === 0) return t('classroom.today');
-    if (diffDays === 1) return t('classroom.yesterday');
-    if (diffDays === 2) return t('classroom.twoDaysAgo');
-    if (diffDays < 7) return `${diffDays} ${t('classroom.daysAgo')}`;
-    return date.toLocaleDateString();
-  };
-
-  return (
-    <div className="group cursor-pointer" onClick={onClick}>
-      <div
-        ref={thumbRef}
-        className="relative w-full aspect-[16/9] rounded-2xl bg-slate-100 dark:bg-slate-800/80 overflow-hidden transition-transform duration-200 group-hover:scale-[1.02]"
-      >
-        {slide && thumbWidth > 0 ? (
-          <ThumbnailSlide
-            slide={slide}
-            size={thumbWidth}
-            viewportSize={slide.viewportSize ?? 1000}
-            viewportRatio={slide.viewportRatio ?? 0.5625}
-          />
-        ) : !slide ? (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="size-12 rounded-2xl bg-gradient-to-br from-violet-100 to-blue-100 dark:from-violet-900/30 dark:to-blue-900/30 flex items-center justify-center">
-              <span className="text-xl opacity-50">📄</span>
-            </div>
-          </div>
-        ) : null}
-      </div>
-
-      <div className="mt-2.5 px-1 flex items-center gap-2">
-        <span className="shrink-0 inline-flex items-center rounded-full bg-violet-100 dark:bg-violet-900/30 px-2 py-0.5 text-[11px] font-medium text-violet-600 dark:text-violet-400">
-          {classroom.sceneCount} {t('classroom.slides')} · {formatCreatedAt(classroom.createdAt)}
-        </span>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <p className="font-medium text-[15px] truncate text-foreground/90 min-w-0">
-              {classroom.name}
-            </p>
-          </TooltipTrigger>
-          <TooltipContent
-            side="bottom"
-            sideOffset={4}
-            className="!max-w-[min(90vw,32rem)] break-words whitespace-normal"
-          >
-            {classroom.name}
-          </TooltipContent>
-        </Tooltip>
-      </div>
     </div>
   );
 }

@@ -108,6 +108,7 @@ export function ChapterList({
       <AnimatePresence mode="popLayout">
         {chapters.map((chapter, idx) => {
           const meta = chapter.classroomId ? classroomMeta[chapter.classroomId] : undefined;
+          const isReady = !!chapter.classroomId && (meta?.ready ?? true);
           const isEditing = editingId === chapter.id;
 
           return (
@@ -139,18 +140,16 @@ export function ChapterList({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-medium text-foreground">{chapter.title}</span>
-                          {chapter.classroomId && (
-                            <Badge
-                              variant="secondary"
-                              className={cn(
-                                meta?.published
-                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                                  : '',
-                              )}
-                            >
-                              {meta?.published ? t('course.published') : t('course.unpublished')}
-                            </Badge>
-                          )}
+                          <Badge
+                            variant="secondary"
+                            className={cn(
+                              isReady
+                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                                : 'text-muted-foreground',
+                            )}
+                          >
+                            {isReady ? t('course.published') : t('course.unpublished')}
+                          </Badge>
                         </div>
                         {chapter.description && (
                           <p className="text-sm text-muted-foreground mt-0.5">{chapter.description}</p>

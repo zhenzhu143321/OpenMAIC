@@ -10,7 +10,7 @@ export interface CourseChapterContext {
 export interface ClassroomMeta {
   name: string;
   sceneCount: number;
-  published: boolean;
+  ready: boolean;
 }
 
 /** Updates accepted by the updateChapter API. null means "clear the field". */
