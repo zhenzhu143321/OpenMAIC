@@ -65,6 +65,7 @@ export function isValidClassroomId(id: string): boolean {
 }
 
 export async function classroomExists(id: string): Promise<boolean> {
+  if (!isValidClassroomId(id)) return false;
   const newPath = path.join(CLASSROOMS_DIR, id, 'classroom.json');
   try { await fs.access(newPath); return true; } catch {}
   const oldPath = path.join(CLASSROOMS_DIR, `${id}.json`);

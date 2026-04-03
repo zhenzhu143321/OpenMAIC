@@ -114,7 +114,7 @@ export function ChapterList({
       <AnimatePresence mode="popLayout">
         {chapters.map((chapter, idx) => {
           const meta = chapter.classroomId ? classroomMeta[chapter.classroomId] : undefined;
-          const isReady = !!chapter.classroomId && (meta?.ready ?? true);
+          const isReady = !!chapter.classroomId && (meta?.ready ?? false);
           const isEditing = editingId === chapter.id;
 
           return (
