@@ -108,7 +108,6 @@ function HomePage() {
   const [recentOpen, setRecentOpen] = useState(true);
 
   // Hydrate client-only state after mount (avoids SSR mismatch)
-  /* eslint-disable react-hooks/set-state-in-effect -- Hydration from localStorage must happen in effect */
   useEffect(() => {
     setStoreHydrated(true);
     try {
@@ -135,7 +134,6 @@ function HomePage() {
       /* localStorage unavailable */
     }
   }, []);
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Restore requirement draft from cache (derived state pattern — no effect needed)
   const [prevCachedRequirement, setPrevCachedRequirement] = useState(cachedRequirement);
@@ -164,7 +162,6 @@ function HomePage() {
     if (courses.length > 0 && classrooms.length === 0) {
       setActiveTab('courses');
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [courses.length, classrooms.length]);
 
   // Close dropdowns when clicking outside
@@ -201,7 +198,6 @@ function HomePage() {
     useMediaGenerationStore.getState().revokeObjectUrls();
     useMediaGenerationStore.setState({ tasks: {} });
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Store hydration on mount
     Promise.all([
       loadClassrooms(),
       fetchCourses(),
@@ -211,6 +207,7 @@ function HomePage() {
         setPublishedCourses(publishedCourseData);
       }
     }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: intentionally run once
   }, []);
 
   const handleDelete = (id: string, e: React.MouseEvent) => {
