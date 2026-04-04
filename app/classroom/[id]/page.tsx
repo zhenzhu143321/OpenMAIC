@@ -377,7 +377,8 @@ export default function ClassroomDetailPage() {
           {loading ? (
             <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
               <div className="text-center text-muted-foreground">
-                <p>Loading classroom...</p>
+                <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent mx-auto mb-3" />
+                <p className="text-sm">课堂加载中，请稍候...</p>
               </div>
             </div>
           ) : error ? (

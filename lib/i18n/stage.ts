@@ -7,9 +7,10 @@ export const stageZhCN = {
     confirmSwitchTitle: '切换页面',
     confirmSwitchMessage: '当前话题正在进行中，切换页面将结束当前话题。确定要切换吗？',
     generatingNextPage: '场景正在生成，请稍候...',
+    loadingClassroom: '课堂加载中，请稍候...',
+    preparingPlayback: '正在准备课堂资源...',
   },
   whiteboard: {
-    title: '互动白板',
     open: '打开白板',
     clear: '清空白板',
     minimize: '最小化白板',
@@ -159,6 +160,8 @@ export const stageEnUS = {
     confirmSwitchMessage:
       'A topic is currently in progress. Switching scenes will end the current topic. Are you sure?',
     generatingNextPage: 'Scene is being generated, please wait...',
+    loadingClassroom: 'Loading classroom, please wait...',
+    preparingPlayback: 'Preparing classroom resources...',
   },
   whiteboard: {
     title: 'Interactive Whiteboard',

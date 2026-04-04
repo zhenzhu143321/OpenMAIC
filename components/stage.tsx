@@ -61,6 +61,7 @@ export function Stage({
   // PlaybackEngine state
   const [engineMode, setEngineMode] = useState<EngineMode>('idle');
   const [playbackCompleted, setPlaybackCompleted] = useState(false); // Distinguishes "never played" idle from "finished" idle
+  const [preparingPlayback, setPreparingPlayback] = useState(false); // True while awaiting media prefill before playback start
   const [lectureSpeech, setLectureSpeech] = useState<string | null>(null); // From PlaybackEngine (lecture)
   const [liveSpeech, setLiveSpeech] = useState<string | null>(null); // From buffer (discussion/QA)
   const [speechProgress, setSpeechProgress] = useState<number | null>(null); // StreamBuffer reveal progress (0–1)
@@ -585,20 +586,25 @@ export function Stage({
     } else {
       const wasCompleted = playbackCompleted;
       setPlaybackCompleted(false);
-      // Starting playback - create/reuse lecture session
-      if (currentScene && chatAreaRef.current) {
-        const sessionId = await chatAreaRef.current.startLecture(currentScene.id);
-        lectureSessionIdRef.current = sessionId;
-      }
-      // Wait for media prefill to finish so TTS audio is in IndexedDB before playback starts
-      await getPrefillPromise();
-      if (wasCompleted) {
-        // Restart from beginning (user clicked restart after completion)
-        lectureActionCounterRef.current = 0;
-        engine.start();
-      } else {
-        // Continue from current position (e.g. after discussion end)
-        engine.continuePlayback();
+      setPreparingPlayback(true);
+      try {
+        // Starting playback - create/reuse lecture session
+        if (currentScene && chatAreaRef.current) {
+          const sessionId = await chatAreaRef.current.startLecture(currentScene.id);
+          lectureSessionIdRef.current = sessionId;
+        }
+        // Wait for media prefill to finish so TTS audio is in IndexedDB before playback starts
+        await getPrefillPromise();
+        if (wasCompleted) {
+          // Restart from beginning (user clicked restart after completion)
+          lectureActionCounterRef.current = 0;
+          engine.start();
+        } else {
+          // Continue from current position (e.g. after discussion end)
+          engine.continuePlayback();
+        }
+      } finally {
+        setPreparingPlayback(false);
       }
     }
   };
@@ -736,6 +742,15 @@ export function Stage({
                 : undefined
             }
           />
+          {/* Media prefill loading overlay — shown while waiting for TTS to download before playback starts */}
+          {preparingPlayback && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+              <div className="flex flex-col items-center gap-3 text-white">
+                <div className="animate-spin rounded-full h-8 w-8 border-2 border-white border-t-transparent" />
+                <p className="text-sm">正在准备课堂资源...</p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Roundtable Area */}
