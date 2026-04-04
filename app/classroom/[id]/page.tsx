@@ -219,6 +219,7 @@ export default function ClassroomDetailPage() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   const generationStartedRef = useRef(false);
   const backfillStartedRef = useRef(false);
@@ -287,6 +288,10 @@ export default function ClassroomDetailPage() {
       setLoading(false);
     }
   }, [classroomId, loadFromStorage]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     // Reset loading state on course switch to unmount Stage during transition,
@@ -380,7 +385,7 @@ export default function ClassroomDetailPage() {
             <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
               <div className="text-center text-muted-foreground">
                 <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent mx-auto mb-3" />
-                <p className="text-sm">{t('stage.loadingClassroom')}</p>
+                {mounted && <p className="text-sm">{t('stage.loadingClassroom')}</p>}
               </div>
             </div>
           ) : error ? (

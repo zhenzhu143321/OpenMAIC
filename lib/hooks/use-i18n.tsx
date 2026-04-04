@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Locale, translate, defaultLocale } from '@/lib/i18n';
 
 type I18nContextType = {
@@ -12,7 +12,7 @@ type I18nContextType = {
 const LOCALE_STORAGE_KEY = 'locale';
 const VALID_LOCALES: Locale[] = ['zh-CN', 'en-US'];
 
-function getInitialLocale(): Locale {
+function getStoredLocale(): Locale {
   try {
     const stored = localStorage.getItem(LOCALE_STORAGE_KEY);
     if (stored && VALID_LOCALES.includes(stored as Locale)) return stored as Locale;
@@ -27,10 +27,15 @@ function getInitialLocale(): Locale {
 const I18nContext = createContext<I18nContextType | undefined>(undefined);
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(() => {
-    if (typeof window === 'undefined') return defaultLocale;
-    return getInitialLocale();
-  });
+  // Always start with defaultLocale to match server-rendered HTML (avoids hydration mismatch).
+  // useEffect updates to the real locale immediately after mount.
+  const [locale, setLocaleState] = useState<Locale>(defaultLocale);
+
+  /* eslint-disable react-hooks/set-state-in-effect -- Hydration from localStorage must happen in effect */
+  useEffect(() => {
+    setLocaleState(getStoredLocale());
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const setLocale = (newLocale: Locale) => {
     setLocaleState(newLocale);
