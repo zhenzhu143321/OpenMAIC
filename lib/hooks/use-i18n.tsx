@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode } from 'react';
 import { Locale, translate, defaultLocale } from '@/lib/i18n';
 
 type I18nContextType = {
@@ -12,28 +12,25 @@ type I18nContextType = {
 const LOCALE_STORAGE_KEY = 'locale';
 const VALID_LOCALES: Locale[] = ['zh-CN', 'en-US'];
 
+function getInitialLocale(): Locale {
+  try {
+    const stored = localStorage.getItem(LOCALE_STORAGE_KEY);
+    if (stored && VALID_LOCALES.includes(stored as Locale)) return stored as Locale;
+    const detected = navigator.language?.startsWith('zh') ? 'zh-CN' : 'en-US';
+    localStorage.setItem(LOCALE_STORAGE_KEY, detected);
+    return detected;
+  } catch {
+    return defaultLocale;
+  }
+}
+
 const I18nContext = createContext<I18nContextType | undefined>(undefined);
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(defaultLocale);
-
-  // Hydrate from localStorage after mount (avoids SSR mismatch)
-  /* eslint-disable react-hooks/set-state-in-effect -- Hydration from localStorage must happen in effect */
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(LOCALE_STORAGE_KEY);
-      if (stored && VALID_LOCALES.includes(stored as Locale)) {
-        setLocaleState(stored as Locale);
-        return;
-      }
-      const detected = navigator.language?.startsWith('zh') ? 'zh-CN' : 'en-US';
-      localStorage.setItem(LOCALE_STORAGE_KEY, detected);
-      setLocaleState(detected);
-    } catch {
-      // localStorage unavailable, keep default
-    }
-  }, []);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  const [locale, setLocaleState] = useState<Locale>(() => {
+    if (typeof window === 'undefined') return defaultLocale;
+    return getInitialLocale();
+  });
 
   const setLocale = (newLocale: Locale) => {
     setLocaleState(newLocale);
