@@ -15,6 +15,7 @@ import { createLogger } from '@/lib/logger';
 import { MediaStageProvider } from '@/lib/contexts/media-stage-context';
 import { generateMediaForOutlines } from '@/lib/media/media-orchestrator';
 import { setPrefillPromise, getPrefillPromise } from '@/lib/media/prefill-state';
+import { useI18n } from '@/lib/hooks/use-i18n';
 
 const log = createLogger('Classroom');
 
@@ -212,6 +213,7 @@ async function backfillMissingTTS(): Promise<void> {
 export default function ClassroomDetailPage() {
   const params = useParams();
   const classroomId = params?.id as string;
+  const { t } = useI18n();
 
   const { loadFromStorage } = useStageStore();
 
@@ -378,7 +380,7 @@ export default function ClassroomDetailPage() {
             <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
               <div className="text-center text-muted-foreground">
                 <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent mx-auto mb-3" />
-                <p className="text-sm">课堂加载中，请稍候...</p>
+                <p className="text-sm">{t('stage.loadingClassroom')}</p>
               </div>
             </div>
           ) : error ? (

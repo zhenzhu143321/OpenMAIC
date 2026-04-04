@@ -747,7 +747,7 @@ export function Stage({
             <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
               <div className="flex flex-col items-center gap-3 text-white">
                 <div className="animate-spin rounded-full h-8 w-8 border-2 border-white border-t-transparent" />
-                <p className="text-sm">正在准备课堂资源...</p>
+                <p className="text-sm">{t('stage.preparingPlayback')}</p>
               </div>
             </div>
           )}
