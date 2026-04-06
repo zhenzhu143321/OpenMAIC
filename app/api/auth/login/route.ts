@@ -1,7 +1,11 @@
 import { type NextRequest, NextResponse } from 'next/server';
+import bcrypt from 'bcrypt';
 import { readUserByUsername, verifyPassword, ensureAdminExists, toSafeUser } from '@/lib/server/user-storage';
 import { getSession } from '@/lib/server/auth-session';
 import type { User } from '@/lib/types/user';
+
+// Pre-computed at module load to ensure full bcrypt work factor runs on user-not-found (timing attack mitigation)
+const DUMMY_HASH: string = bcrypt.hashSync('__placeholder__', 12);
 
 export async function POST(req: NextRequest) {
   // Bootstrap admin on first login attempt
@@ -26,7 +30,7 @@ export async function POST(req: NextRequest) {
   if (!user) {
     // Constant-time: run bcrypt even on miss to prevent timing attacks
     await verifyPassword(
-      { passwordHash: '$2b$12$invalidhashfortimingXXXXXXXXXXXXXXXXXXXX' } as User,
+      { passwordHash: DUMMY_HASH } as User,
       password,
     );
     return NextResponse.json({ success: false, error: 'Invalid credentials' }, { status: 401 });
