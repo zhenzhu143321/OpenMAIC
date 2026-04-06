@@ -1,58 +1,67 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { addChapter, updateChapter, removeChapter, reorderChapters } from '@/lib/server/course-storage';
+import { addChapter, updateChapter, removeChapter, reorderChapters, readCourse } from '@/lib/server/course-storage';
+import { requireRole, requireOwnership } from '@/lib/server/auth-helpers';
 import type { ChapterUpdates } from '@/lib/types/course';
 
 export async function POST(req: NextRequest) {
-  try {
-    const { courseId, title, description } = await req.json();
-    if (!courseId || !title) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-    }
-    const chapter = await addChapter(courseId, { title, description });
-    return NextResponse.json({ success: true, chapter });
-  } catch (error) {
-    return NextResponse.json({ error: String(error) }, { status: 500 });
+  const authResult = await requireRole(req, 'teacher', 'admin');
+  if (authResult instanceof NextResponse) return authResult;
+  const currentUser = authResult;
+
+  const { courseId, title, description } = await req.json();
+  if (!courseId || !title) {
+    return NextResponse.json({ success: false, error: 'courseId and title required' }, { status: 400 });
   }
+
+  const course = await readCourse(courseId);
+  if (!course) return NextResponse.json({ success: false, error: 'Course not found' }, { status: 404 });
+  const ownershipError = requireOwnership(currentUser, course.ownerId);
+  if (ownershipError) return ownershipError;
+
+  const chapter = await addChapter(courseId, { title, description });
+  return NextResponse.json({ success: true, chapter });
 }
 
 export async function PUT(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const { courseId } = body;
-    if (!courseId) {
-      return NextResponse.json({ error: 'Missing courseId' }, { status: 400 });
-    }
-    // Reorder: { courseId, chapterIds: string[] }
-    if (Array.isArray(body.chapterIds)) {
-      await reorderChapters(courseId, body.chapterIds);
-      return NextResponse.json({ success: true });
-    }
-    // Update single chapter: { courseId, chapterId, ...updates }
-    const { chapterId, title, description, classroomId } = body;
-    if (!chapterId) {
-      return NextResponse.json({ error: 'Missing chapterId' }, { status: 400 });
-    }
-    // Build updates; include a key whenever it is explicitly present in body (even if null)
-    const updates: ChapterUpdates = {};
-    if ('title' in body && title !== undefined) updates.title = title;
-    if ('description' in body) updates.description = description ?? null;
-    if ('classroomId' in body) updates.classroomId = classroomId ?? null;
-    await updateChapter(courseId, chapterId, updates);
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    return NextResponse.json({ error: String(error) }, { status: 500 });
+  const authResult = await requireRole(req, 'teacher', 'admin');
+  if (authResult instanceof NextResponse) return authResult;
+  const currentUser = authResult;
+
+  const body = await req.json();
+  const { courseId, chapterIds, chapterId, ...updates } = body;
+  if (!courseId) {
+    return NextResponse.json({ success: false, error: 'courseId required' }, { status: 400 });
   }
+
+  const course = await readCourse(courseId);
+  if (!course) return NextResponse.json({ success: false, error: 'Course not found' }, { status: 404 });
+  const ownershipError = requireOwnership(currentUser, course.ownerId);
+  if (ownershipError) return ownershipError;
+
+  if (Array.isArray(chapterIds)) {
+    await reorderChapters(courseId, chapterIds);
+  } else {
+    if (!chapterId) return NextResponse.json({ success: false, error: 'chapterId required' }, { status: 400 });
+    await updateChapter(courseId, chapterId, updates as ChapterUpdates);
+  }
+  return NextResponse.json({ success: true });
 }
 
 export async function DELETE(req: NextRequest) {
-  try {
-    const { courseId, chapterId } = await req.json();
-    if (!courseId || !chapterId) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-    }
-    await removeChapter(courseId, chapterId);
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    return NextResponse.json({ error: String(error) }, { status: 500 });
+  const authResult = await requireRole(req, 'teacher', 'admin');
+  if (authResult instanceof NextResponse) return authResult;
+  const currentUser = authResult;
+
+  const { courseId, chapterId } = await req.json();
+  if (!courseId || !chapterId) {
+    return NextResponse.json({ success: false, error: 'courseId and chapterId required' }, { status: 400 });
   }
+
+  const course = await readCourse(courseId);
+  if (!course) return NextResponse.json({ success: false, error: 'Course not found' }, { status: 404 });
+  const ownershipError = requireOwnership(currentUser, course.ownerId);
+  if (ownershipError) return ownershipError;
+
+  await removeChapter(courseId, chapterId);
+  return NextResponse.json({ success: true });
 }
