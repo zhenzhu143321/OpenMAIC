@@ -9,7 +9,9 @@ function LoginForm() {
   const { t } = useI18n();
   const router = useRouter();
   const params = useSearchParams();
-  const from = params.get('from') ?? '/';
+  const rawFrom = params.get('from') ?? '/';
+  // Prevent open redirect: only allow internal paths (must start with / and not //)
+  const from = rawFrom.startsWith('/') && !rawFrom.startsWith('//') ? rawFrom : '/';
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');

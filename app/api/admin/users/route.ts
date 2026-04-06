@@ -46,6 +46,7 @@ export async function PUT(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const authResult = await requireRole(req, 'admin');
   if (authResult instanceof NextResponse) return authResult;
+  const currentAdmin = authResult;
 
   const { searchParams } = new URL(req.url);
   const id = searchParams.get('id');
@@ -55,10 +56,25 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ success: false, error: 'id required' }, { status: 400 });
   }
 
+  // Prevent self-deletion
+  if (id === currentAdmin.id) {
+    return NextResponse.json({ success: false, error: 'Cannot delete your own account' }, { status: 400 });
+  }
+
+  // Prevent deleting the last admin
+  const targetUser = await readUser(id);
+  if (targetUser?.role === 'admin') {
+    const allUsers = await listUsers();
+    const activeAdmins = allUsers.filter((u) => u.role === 'admin' && u.status !== 'disabled');
+    if (activeAdmins.length <= 1) {
+      return NextResponse.json({ success: false, error: 'Cannot delete the last admin account' }, { status: 400 });
+    }
+  }
+
   // Transfer courses if requested
   if (transferTo) {
-    const targetUser = await readUser(transferTo);
-    if (!targetUser) {
+    const transferTargetUser = await readUser(transferTo);
+    if (!transferTargetUser) {
       return NextResponse.json({ success: false, error: 'Transfer target user not found' }, { status: 404 });
     }
     const allCourses = await listCourses();
