@@ -24,7 +24,10 @@ export default function AdminPage() {
     setLoading(false);
   }
 
-  useEffect(() => { fetchUsers(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    void fetchUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleUpdateUser(id: string, updates: Partial<Pick<SafeUser, 'role' | 'status'>>) {
     await fetch('/api/admin/users', {
