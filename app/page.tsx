@@ -34,6 +34,7 @@ import { useTheme } from '@/lib/hooks/use-theme';
 import { nanoid } from 'nanoid';
 import { storePdfBlob } from '@/lib/utils/image-storage';
 import type { UserRequirements } from '@/lib/types/generation';
+import type { SafeUser } from '@/lib/types/user';
 import { COURSE_CHAPTER_CONTEXT_KEY, type CourseChapterContext, type CourseListItem } from '@/lib/types/course';
 import { useSettingsStore } from '@/lib/store/settings';
 import { useUserProfileStore, AVATAR_OPTIONS } from '@/lib/store/user-profile';
@@ -106,6 +107,16 @@ function HomePage() {
   const currentModelId = useSettingsStore((s) => s.modelId);
   const [storeHydrated, setStoreHydrated] = useState(false);
   const [recentOpen, setRecentOpen] = useState(true);
+  const [currentUser, setCurrentUser] = useState<SafeUser | null>(null);
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setCurrentUser(d.user); })
+      .catch(() => {});
+  }, []);
+
+  const canCreate = currentUser?.role === 'teacher' || currentUser?.role === 'admin';
 
   // Hydrate client-only state after mount (avoids SSR mismatch)
   useEffect(() => {
