@@ -6,6 +6,7 @@ import { chatZhCN, chatEnUS } from './chat';
 import { generationZhCN, generationEnUS } from './generation';
 import { settingsZhCN, settingsEnUS } from './settings';
 import { courseZhCN, courseEnUS } from './course';
+import { authZhCN, authEnUS } from './auth';
 
 export const translations = {
   'zh-CN': {
@@ -15,6 +16,7 @@ export const translations = {
     ...generationZhCN,
     ...settingsZhCN,
     ...courseZhCN,
+    ...authZhCN,
   },
   'en-US': {
     ...commonEnUS,
@@ -23,6 +25,7 @@ export const translations = {
     ...generationEnUS,
     ...settingsEnUS,
     ...courseEnUS,
+    ...authEnUS,
   },
 } as const;
 
