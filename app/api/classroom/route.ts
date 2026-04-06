@@ -26,7 +26,14 @@ export async function POST(request: NextRequest) {
     const baseUrl = buildRequestOrigin(request);
 
     const persisted = await persistClassroom(
-      { id, stage: { ...stage, id }, scenes, outlines: outlines || [] },
+      {
+        id,
+        stage: { ...stage, id },
+        scenes,
+        outlines: outlines || [],
+        ownerId: 'legacy',
+        visibility: 'standalone-published',
+      },
       baseUrl,
     );
 

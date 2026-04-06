@@ -570,6 +570,8 @@ export async function generateClassroom(
       stage,
       scenes,
       outlines,
+      ownerId: 'legacy',
+      visibility: 'standalone-published',
     },
     options.baseUrl,
   );

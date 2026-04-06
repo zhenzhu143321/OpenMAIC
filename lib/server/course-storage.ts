@@ -7,6 +7,15 @@ import { withCourseLock } from './course-lock';
 
 const COURSES_DIR = path.join(PROJECT_ROOT, 'data', 'courses');
 
+// Lazily resolved admin ID for migration — avoids circular dep by dynamic import
+let _adminIdCache: string | null = null;
+async function ensureAdminId(): Promise<string> {
+  if (_adminIdCache) return _adminIdCache;
+  const { ensureAdminExists } = await import('./user-storage');
+  _adminIdCache = await ensureAdminExists();
+  return _adminIdCache;
+}
+
 async function ensureCoursesDir() {
   await fs.mkdir(COURSES_DIR, { recursive: true });
 }
@@ -16,8 +25,10 @@ async function ensureCoursesDir() {
 async function migrateCourseIfNeeded(
   filePath: string,
   raw: Record<string, unknown>,
+  adminId?: string,
 ): Promise<Course> {
   let course: Course;
+  let needsWrite = false;
   if (Array.isArray((raw as unknown as Course).chapters)) {
     course = raw as unknown as Course;
   } else {
@@ -30,10 +41,19 @@ async function migrateCourseIfNeeded(
     }));
     const { classroomIds: _removed, ...rest } = raw;
     course = { ...(rest as Omit<Course, 'chapters'>), chapters } as Course;
+    needsWrite = true;
   }
   // Backfill missing status field for old courses
   if (!course.status) {
     course.status = 'draft';
+    needsWrite = true;
+  }
+  // Backfill missing ownerId for legacy courses
+  if (!course.ownerId) {
+    course.ownerId = adminId ?? 'legacy';
+    needsWrite = true;
+  }
+  if (needsWrite) {
     await writeJsonFileAtomic(filePath, course);
   }
   return course;
@@ -50,7 +70,8 @@ export async function readCourse(id: string): Promise<Course | null> {
   try {
     const content = await fs.readFile(filePath, 'utf-8');
     const raw = JSON.parse(content) as Record<string, unknown>;
-    return await migrateCourseIfNeeded(filePath, raw);
+    const adminId = await ensureAdminId().catch(() => 'legacy');
+    return await migrateCourseIfNeeded(filePath, raw, adminId);
   } catch {
     return null;
   }
@@ -61,6 +82,7 @@ export async function listCourses(): Promise<CourseListItem[]> {
   try {
     const files = await fs.readdir(COURSES_DIR);
     const jsonFiles = files.filter((f) => f.endsWith('.json'));
+    const adminId = await ensureAdminId().catch(() => 'legacy');
 
     const courses = await Promise.all(
       jsonFiles.map(async (file) => {
@@ -68,7 +90,7 @@ export async function listCourses(): Promise<CourseListItem[]> {
         try {
           const content = await fs.readFile(filePath, 'utf-8');
           const raw = JSON.parse(content) as Record<string, unknown>;
-          const course = await migrateCourseIfNeeded(filePath, raw);
+          const course = await migrateCourseIfNeeded(filePath, raw, adminId);
           return {
             id: course.id,
             name: course.name,
@@ -76,6 +98,7 @@ export async function listCourses(): Promise<CourseListItem[]> {
             major: course.major,
             description: course.description,
             teacherName: course.teacherName,
+            ownerId: course.ownerId,
             chapterCount: course.chapters.length,
             status: course.status,
             ...(course.publishedAt ? { publishedAt: course.publishedAt } : {}),

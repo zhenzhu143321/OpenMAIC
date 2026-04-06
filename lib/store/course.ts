@@ -65,6 +65,7 @@ export const useCourseStore = create<CourseState>((set, get) => ({
       ...data,
       chapters: [],
       id,
+      ownerId: '',
       status: 'draft',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
