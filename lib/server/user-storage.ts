@@ -129,7 +129,7 @@ export async function listUsers(): Promise<SafeUser[]> {
 }
 
 export async function verifyPassword(user: User, password: string): Promise<boolean> {
-  return bcrypt.compare(user.passwordHash, password);
+  return bcrypt.compare(password, user.passwordHash);
 }
 
 /**
