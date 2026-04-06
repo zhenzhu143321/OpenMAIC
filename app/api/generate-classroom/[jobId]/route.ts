@@ -1,4 +1,5 @@
-import { type NextRequest } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+import { requireUser } from '@/lib/server/auth-helpers';
 import { apiError, apiSuccess } from '@/lib/server/api-response';
 import {
   isValidClassroomJobId,
@@ -9,6 +10,9 @@ import { buildRequestOrigin } from '@/lib/server/classroom-storage';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest, context: { params: Promise<{ jobId: string }> }) {
+  const authResult = await requireUser(req);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const { jobId } = await context.params;
 

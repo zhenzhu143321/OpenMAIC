@@ -1,4 +1,6 @@
 import { after, type NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
+import { requireUser } from '@/lib/server/auth-helpers';
 import { nanoid } from 'nanoid';
 import { apiError, apiSuccess } from '@/lib/server/api-response';
 import { type GenerateClassroomInput } from '@/lib/server/classroom-generation';
@@ -15,6 +17,9 @@ function parseOptionalNumber(value: string | null): number | undefined {
 }
 
 export async function POST(req: NextRequest) {
+  const authResult = await requireUser(req);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const rawBody = (await req.json()) as Partial<GenerateClassroomInput>;
     const body: GenerateClassroomInput = {

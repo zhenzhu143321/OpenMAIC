@@ -5,6 +5,8 @@
  * Simple JSON request/response using Tavily search.
  */
 
+import { NextRequest, NextResponse } from 'next/server';
+import { requireUser } from '@/lib/server/auth-helpers';
 import { searchWithTavily, formatSearchResultsAsContext } from '@/lib/web-search/tavily';
 import { resolveWebSearchApiKey } from '@/lib/server/provider-config';
 import { createLogger } from '@/lib/logger';
@@ -12,7 +14,10 @@ import { apiError, apiSuccess } from '@/lib/server/api-response';
 
 const log = createLogger('WebSearch');
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  const authResult = await requireUser(req);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const body = await req.json();
     const { query, apiKey: clientApiKey } = body as {

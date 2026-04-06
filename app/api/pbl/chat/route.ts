@@ -5,7 +5,8 @@
  * Students @question or @judge an agent, and this endpoint generates a response.
  */
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireUser } from '@/lib/server/auth-helpers';
 import { callLLM } from '@/lib/ai/llm';
 import type { PBLAgent, PBLIssue } from '@/lib/pbl/types';
 import { createLogger } from '@/lib/logger';
@@ -23,6 +24,9 @@ interface PBLChatRequest {
 }
 
 export async function POST(req: NextRequest) {
+  const authResult = await requireUser(req);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const body = (await req.json()) as PBLChatRequest;
     const { message, agent, currentIssue, recentMessages, userRole, agentType } = body;

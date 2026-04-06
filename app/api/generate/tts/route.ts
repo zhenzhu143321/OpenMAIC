@@ -7,7 +7,8 @@
  * POST /api/generate/tts
  */
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireUser } from '@/lib/server/auth-helpers';
 import { generateTTS } from '@/lib/audio/tts-providers';
 import { resolveTTSApiKey, resolveTTSBaseUrl } from '@/lib/server/provider-config';
 import type { TTSProviderId } from '@/lib/audio/types';
@@ -20,6 +21,9 @@ const log = createLogger('TTS API');
 export const maxDuration = 30;
 
 export async function POST(req: NextRequest) {
+  const authResult = await requireUser(req);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const body = await req.json();
     const { text, audioId, ttsProviderId, ttsVoice, ttsSpeed, ttsApiKey, ttsBaseUrl } = body as {

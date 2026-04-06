@@ -1,4 +1,5 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireUser } from '@/lib/server/auth-helpers';
 import { transcribeAudio } from '@/lib/audio/asr-providers';
 import { resolveASRApiKey, resolveASRBaseUrl } from '@/lib/server/provider-config';
 import type { ASRProviderId } from '@/lib/audio/types';
@@ -10,6 +11,9 @@ const log = createLogger('Transcription');
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
+  const authResult = await requireUser(req);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const formData = await req.formData();
     const audioFile = formData.get('audio') as File;

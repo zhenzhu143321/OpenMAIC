@@ -1,4 +1,5 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireUser } from '@/lib/server/auth-helpers';
 import { parsePDF } from '@/lib/pdf/pdf-providers';
 import { resolvePDFApiKey, resolvePDFBaseUrl } from '@/lib/server/provider-config';
 import type { PDFProviderId } from '@/lib/pdf/types';
@@ -9,6 +10,9 @@ import { validateUrlForSSRF } from '@/lib/server/ssrf-guard';
 const log = createLogger('Parse PDF');
 
 export async function POST(req: NextRequest) {
+  const authResult = await requireUser(req);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const contentType = req.headers.get('content-type') || '';
     if (!contentType.includes('multipart/form-data')) {
