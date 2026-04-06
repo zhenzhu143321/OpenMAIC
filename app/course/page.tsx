@@ -6,6 +6,7 @@ import { motion } from 'motion/react';
 import { useI18n } from '@/lib/hooks/use-i18n';
 import { useCourseStore } from '@/lib/store/course';
 import type { CourseListItem } from '@/lib/types/course';
+import type { SafeUser } from '@/lib/types/user';
 import { CourseForm } from '@/components/course/course-form';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -44,9 +45,10 @@ interface CourseCardProps {
   onOpen: () => void;
   onDelete: () => void;
   chapterLabel: string;
+  canManage: boolean;
 }
 
-function CourseCard({ course, index, onOpen, onDelete, chapterLabel }: CourseCardProps) {
+function CourseCard({ course, index, onOpen, onDelete, chapterLabel, canManage }: CourseCardProps) {
   const cover = coverFor(course.id);
 
   return (
@@ -92,6 +94,7 @@ function CourseCard({ course, index, onOpen, onDelete, chapterLabel }: CourseCar
               className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white/15 hover:bg-white/30 backdrop-blur-sm text-white p-1 rounded-lg"
               onClick={(e) => { e.stopPropagation(); onDelete(); }}
               aria-label="删除课程"
+              style={{ display: canManage ? undefined : 'none' }}
             >
               <Trash2 className="size-3" />
             </button>
@@ -135,10 +138,17 @@ export default function CoursePage() {
   const { courses, fetchCourses, createCourse, deleteCourse } = useCourseStore();
   const [showForm, setShowForm] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<SafeUser | null>(null);
 
   useEffect(() => {
     fetchCourses();
+    fetch('/api/auth/me')
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setCurrentUser(d.user); })
+      .catch(() => {});
   }, [fetchCourses]);
+
+  const canManage = currentUser?.role === 'teacher' || currentUser?.role === 'admin';
 
   const handleCreate = async (data: Parameters<typeof createCourse>[0]) => {
     await createCourse(data);
@@ -174,7 +184,7 @@ export default function CoursePage() {
             </Button>
             <h1 className="text-2xl font-bold text-foreground">{t('course.myCourses')}</h1>
           </div>
-          <Button onClick={() => setShowForm(true)}>
+          <Button onClick={() => setShowForm(true)} style={{ display: canManage ? undefined : 'none' }}>
             <Plus />
             {t('course.create')}
           </Button>
@@ -208,6 +218,7 @@ export default function CoursePage() {
                 onOpen={() => router.push(`/course/${course.id}`)}
                 onDelete={() => setDeletingId(course.id)}
                 chapterLabel={t('course.chapter')}
+                canManage={canManage}
               />
             ))}
           </div>

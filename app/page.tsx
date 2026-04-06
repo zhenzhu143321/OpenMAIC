@@ -214,8 +214,9 @@ function HomePage() {
       fetchCourses(),
       fetch('/api/course?status=published').then(res => res.json()),
     ]).then(([, , publishedCourseData]) => {
-      if (Array.isArray(publishedCourseData)) {
-        setPublishedCourses(publishedCourseData);
+      const list = publishedCourseData?.courses ?? publishedCourseData;
+      if (Array.isArray(list)) {
+        setPublishedCourses(list);
       }
     }).catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: intentionally run once
@@ -773,9 +774,11 @@ function HomePage() {
           {activeTab === 'courses' && (
             <div className="w-full">
               <div className="flex justify-end mb-3">
-                <Button variant="outline" size="sm" onClick={() => router.push('/course')}>
-                  {t('course.manage')}
-                </Button>
+                {canCreate && (
+                  <Button variant="outline" size="sm" onClick={() => router.push('/course')}>
+                    {t('course.manage')}
+                  </Button>
+                )}
               </div>
               {courses.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8 text-sm">{t('course.noCourses')}</p>
