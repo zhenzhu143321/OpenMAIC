@@ -82,7 +82,7 @@ export async function requireRole(
  * Returns a 403 NextResponse if the check fails; undefined on success.
  */
 export function requireOwnership(user: SafeUser, resourceOwnerId: string): NextResponse | undefined {
-  if (user.role === 'admin') return undefined; // admin bypasses
+  if (effectiveRole(user) === 'admin') return undefined; // admin bypasses
   if (user.id !== resourceOwnerId) {
     return NextResponse.json({ success: false, error: 'Forbidden: not resource owner' }, { status: 403 });
   }
