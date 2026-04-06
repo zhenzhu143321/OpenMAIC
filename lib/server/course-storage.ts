@@ -50,7 +50,7 @@ async function migrateCourseIfNeeded(
   }
   // Backfill missing ownerId for legacy courses
   if (!course.ownerId) {
-    course.ownerId = adminId ?? 'legacy';
+    course.ownerId = adminId ?? await ensureAdminId().catch(() => 'legacy');
     needsWrite = true;
   }
   if (needsWrite) {
