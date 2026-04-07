@@ -148,7 +148,7 @@ export default function CoursePage() {
       .catch(() => {});
   }, [fetchCourses]);
 
-  const canManage = currentUser?.role === 'teacher' || currentUser?.role === 'admin';
+  const canManage = (currentUser?.role === 'teacher' && currentUser?.status === 'active') || currentUser?.role === 'admin';
 
   const handleCreate = async (data: Parameters<typeof createCourse>[0]) => {
     await createCourse(data);

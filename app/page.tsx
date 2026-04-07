@@ -116,7 +116,7 @@ function HomePage() {
       .catch(() => {});
   }, []);
 
-  const canCreate = currentUser?.role === 'teacher' || currentUser?.role === 'admin';
+  const canCreate = (currentUser?.role === 'teacher' && currentUser?.status === 'active') || currentUser?.role === 'admin';
 
   // Hydrate client-only state after mount (avoids SSR mismatch)
   useEffect(() => {

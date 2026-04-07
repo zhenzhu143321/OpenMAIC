@@ -36,11 +36,17 @@ export default function RegisterPage() {
         return;
       }
       // Auto-login after register
-      await fetch('/api/auth/login', {
+      const loginRes = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
       });
+      const loginJson = await loginRes.json();
+      if (!loginJson.success) {
+        // Registration succeeded but auto-login failed — send to login page
+        router.replace('/login');
+        return;
+      }
       router.replace('/');
     } finally {
       setLoading(false);

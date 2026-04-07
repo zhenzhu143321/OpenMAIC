@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   const authResult = await requireRole(req, 'admin');
   if (authResult instanceof NextResponse) return authResult;
+  const currentAdmin = authResult;
 
   const body = await req.json().catch(() => null);
   if (!body?.id) {
@@ -30,6 +31,30 @@ export async function PUT(req: NextRequest) {
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ success: false, error: 'No valid fields to update' }, { status: 400 });
+  }
+
+  // Prevent demoting or disabling the last admin
+  const targetUser = await readUser(id);
+  if (targetUser?.role === 'admin') {
+    const isDemotion = role && role !== 'admin';
+    const isDisabling = status === 'disabled';
+    if (isDemotion || isDisabling) {
+      // Self-demotion is always blocked
+      if (id === currentAdmin.id) {
+        return NextResponse.json(
+          { success: false, error: 'Cannot demote or disable your own admin account' },
+          { status: 400 },
+        );
+      }
+      const allUsers = await listUsers();
+      const activeAdmins = allUsers.filter((u) => u.role === 'admin' && u.status !== 'disabled');
+      if (activeAdmins.length <= 1) {
+        return NextResponse.json(
+          { success: false, error: 'Cannot demote or disable the last admin account' },
+          { status: 400 },
+        );
+      }
+    }
   }
 
   try {
