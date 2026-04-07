@@ -203,7 +203,7 @@ export default function CoursePage() {
             </div>
             <p className="text-lg font-medium text-foreground mb-2">{t('course.emptyStateTitle')}</p>
             <p className="text-muted-foreground text-sm mb-6">{t('course.emptyStateDesc')}</p>
-            <Button onClick={() => setShowForm(true)}>
+            <Button onClick={() => setShowForm(true)} style={{ display: canManage ? undefined : 'none' }}>
               <Plus />
               {t('course.create')}
             </Button>
