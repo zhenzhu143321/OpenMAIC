@@ -9,6 +9,7 @@ import type { CourseListItem } from '@/lib/types/course';
 import type { SafeUser } from '@/lib/types/user';
 import { CourseForm } from '@/components/course/course-form';
 import { Button } from '@/components/ui/button';
+import { UserMenu } from '@/components/user-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -90,14 +91,15 @@ function CourseCard({ course, index, onOpen, onDelete, chapterLabel, canManage }
               <BookOpen className="size-2.5" />
               {course.chapterCount} {chapterLabel}
             </span>
-            <button
-              className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white/15 hover:bg-white/30 backdrop-blur-sm text-white p-1 rounded-lg"
-              onClick={(e) => { e.stopPropagation(); onDelete(); }}
-              aria-label="删除课程"
-              style={{ display: canManage ? undefined : 'none' }}
-            >
-              <Trash2 className="size-3" />
-            </button>
+            {canManage && (
+              <button
+                className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white/15 hover:bg-white/30 backdrop-blur-sm text-white p-1 rounded-lg"
+                onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                aria-label="删除课程"
+              >
+                <Trash2 className="size-3" />
+              </button>
+            )}
           </div>
           {/* Course name on gradient */}
           <h2 className="relative z-10 text-[13px] font-bold text-white leading-snug line-clamp-1 tracking-tight drop-shadow-sm">
@@ -184,10 +186,15 @@ export default function CoursePage() {
             </Button>
             <h1 className="text-2xl font-bold text-foreground">{t('course.myCourses')}</h1>
           </div>
-          <Button onClick={() => setShowForm(true)} style={{ display: canManage ? undefined : 'none' }}>
-            <Plus />
-            {t('course.create')}
-          </Button>
+          <div className="flex items-center gap-3">
+            {canManage && (
+              <Button onClick={() => setShowForm(true)}>
+                <Plus />
+                {t('course.create')}
+              </Button>
+            )}
+            <UserMenu user={currentUser} />
+          </div>
         </motion.div>
 
         {/* Empty state */}
@@ -203,10 +210,12 @@ export default function CoursePage() {
             </div>
             <p className="text-lg font-medium text-foreground mb-2">{t('course.emptyStateTitle')}</p>
             <p className="text-muted-foreground text-sm mb-6">{t('course.emptyStateDesc')}</p>
-            <Button onClick={() => setShowForm(true)} style={{ display: canManage ? undefined : 'none' }}>
-              <Plus />
-              {t('course.create')}
-            </Button>
+            {canManage && (
+              <Button onClick={() => setShowForm(true)}>
+                <Plus />
+                {t('course.create')}
+              </Button>
+            )}
           </motion.div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">

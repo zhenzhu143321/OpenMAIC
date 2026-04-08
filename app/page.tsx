@@ -28,6 +28,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea as UITextarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { SettingsDialog } from '@/components/settings';
+import { UserMenu } from '@/components/user-menu';
 import { GenerationToolbar } from '@/components/generation/generation-toolbar';
 import { AgentBar } from '@/components/agent/agent-bar';
 import { useTheme } from '@/lib/hooks/use-theme';
@@ -522,6 +523,11 @@ function HomePage() {
             </>
           )}
         </div>
+
+        <div className="w-[1px] h-4 bg-gray-200 dark:bg-gray-700" />
+
+        {/* User menu (logout, role badge) */}
+        <UserMenu user={currentUser} />
       </div>
       <SettingsDialog
         open={settingsOpen}
@@ -737,7 +743,7 @@ function HomePage() {
       )}
 
       {/* ═══ Recent classrooms — collapsible ═══ */}
-      {(classrooms.length > 0 || courses.length > 0) && (
+      {(classrooms.length > 0 || (canCreate && courses.length > 0)) && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -746,17 +752,19 @@ function HomePage() {
         >
           {/* Tab buttons */}
           <div className="flex gap-2 mb-4 p-1 rounded-full bg-muted/60 backdrop-blur-sm">
-            <button
-              onClick={() => setActiveTab('courses')}
-              className={cn(
-                'px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200',
-                activeTab === 'courses'
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              {t('course.myCourses')} ({courses.length})
-            </button>
+            {canCreate && (
+              <button
+                onClick={() => setActiveTab('courses')}
+                className={cn(
+                  'px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200',
+                  activeTab === 'courses'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {t('course.myCourses')} ({courses.length})
+              </button>
+            )}
             <button
               onClick={() => setActiveTab('standalone')}
               className={cn(
@@ -789,7 +797,7 @@ function HomePage() {
                     return (
                       <div
                         key={course.id}
-                        onClick={() => router.push(`/course/${course.id}`)}
+                        onClick={() => router.push(`/course/${course.id}${canCreate ? '' : '?mode=view'}`)}
                         className="group rounded-2xl overflow-hidden cursor-pointer border border-white/10 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-250 flex flex-col"
                         style={{ minHeight: '200px' }}
                       >
