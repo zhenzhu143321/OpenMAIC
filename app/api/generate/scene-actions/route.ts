@@ -6,7 +6,8 @@
  * This is the second half of the two-step scene generation pipeline.
  */
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireUser } from '@/lib/server/auth-helpers';
 import { callLLM } from '@/lib/ai/llm';
 import {
   generateSceneActions,
@@ -32,6 +33,9 @@ const log = createLogger('Scene Actions API');
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
+  const authResult = await requireUser(req);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const body = await req.json();
     const {

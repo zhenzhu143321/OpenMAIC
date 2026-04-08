@@ -11,7 +11,8 @@
  *   { type: 'error', error: string }
  */
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireUser } from '@/lib/server/auth-helpers';
 import { streamLLM } from '@/lib/ai/llm';
 import { buildPrompt, PROMPT_IDS } from '@/lib/generation/prompts';
 import {
@@ -97,6 +98,9 @@ function extractNewOutlines(buffer: string, alreadyParsed: number): SceneOutline
 }
 
 export async function POST(req: NextRequest) {
+  const authResult = await requireUser(req);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const body = await req.json();
 

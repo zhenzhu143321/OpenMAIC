@@ -28,12 +28,14 @@ import { Button } from '@/components/ui/button';
 import { Textarea as UITextarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { SettingsDialog } from '@/components/settings';
+import { UserMenu } from '@/components/user-menu';
 import { GenerationToolbar } from '@/components/generation/generation-toolbar';
 import { AgentBar } from '@/components/agent/agent-bar';
 import { useTheme } from '@/lib/hooks/use-theme';
 import { nanoid } from 'nanoid';
 import { storePdfBlob } from '@/lib/utils/image-storage';
 import type { UserRequirements } from '@/lib/types/generation';
+import type { SafeUser } from '@/lib/types/user';
 import { COURSE_CHAPTER_CONTEXT_KEY, type CourseChapterContext, type CourseListItem } from '@/lib/types/course';
 import { useSettingsStore } from '@/lib/store/settings';
 import { useUserProfileStore, AVATAR_OPTIONS } from '@/lib/store/user-profile';
@@ -106,6 +108,16 @@ function HomePage() {
   const currentModelId = useSettingsStore((s) => s.modelId);
   const [storeHydrated, setStoreHydrated] = useState(false);
   const [recentOpen, setRecentOpen] = useState(true);
+  const [currentUser, setCurrentUser] = useState<SafeUser | null>(null);
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setCurrentUser(d.user); })
+      .catch(() => {});
+  }, []);
+
+  const canCreate = (currentUser?.role === 'teacher' && currentUser?.status === 'active') || currentUser?.role === 'admin';
 
   // Hydrate client-only state after mount (avoids SSR mismatch)
   useEffect(() => {
@@ -203,8 +215,9 @@ function HomePage() {
       fetchCourses(),
       fetch('/api/course?status=published').then(res => res.json()),
     ]).then(([, , publishedCourseData]) => {
-      if (Array.isArray(publishedCourseData)) {
-        setPublishedCourses(publishedCourseData);
+      const list = publishedCourseData?.courses ?? publishedCourseData;
+      if (Array.isArray(list)) {
+        setPublishedCourses(list);
       }
     }).catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: intentionally run once
@@ -510,6 +523,11 @@ function HomePage() {
             </>
           )}
         </div>
+
+        <div className="w-[1px] h-4 bg-gray-200 dark:bg-gray-700" />
+
+        {/* User menu (logout, role badge) */}
+        <UserMenu user={currentUser} />
       </div>
       <SettingsDialog
         open={settingsOpen}
@@ -725,7 +743,7 @@ function HomePage() {
       )}
 
       {/* ═══ Recent classrooms — collapsible ═══ */}
-      {(classrooms.length > 0 || courses.length > 0) && (
+      {(classrooms.length > 0 || (canCreate && courses.length > 0)) && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -734,17 +752,19 @@ function HomePage() {
         >
           {/* Tab buttons */}
           <div className="flex gap-2 mb-4 p-1 rounded-full bg-muted/60 backdrop-blur-sm">
-            <button
-              onClick={() => setActiveTab('courses')}
-              className={cn(
-                'px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200',
-                activeTab === 'courses'
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              {t('course.myCourses')} ({courses.length})
-            </button>
+            {canCreate && (
+              <button
+                onClick={() => setActiveTab('courses')}
+                className={cn(
+                  'px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200',
+                  activeTab === 'courses'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {t('course.myCourses')} ({courses.length})
+              </button>
+            )}
             <button
               onClick={() => setActiveTab('standalone')}
               className={cn(
@@ -762,9 +782,11 @@ function HomePage() {
           {activeTab === 'courses' && (
             <div className="w-full">
               <div className="flex justify-end mb-3">
-                <Button variant="outline" size="sm" onClick={() => router.push('/course')}>
-                  {t('course.manage')}
-                </Button>
+                {canCreate && (
+                  <Button variant="outline" size="sm" onClick={() => router.push('/course')}>
+                    {t('course.manage')}
+                  </Button>
+                )}
               </div>
               {courses.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8 text-sm">{t('course.noCourses')}</p>
@@ -775,7 +797,7 @@ function HomePage() {
                     return (
                       <div
                         key={course.id}
-                        onClick={() => router.push(`/course/${course.id}`)}
+                        onClick={() => router.push(`/course/${course.id}${canCreate ? '' : '?mode=view'}`)}
                         className="group rounded-2xl overflow-hidden cursor-pointer border border-white/10 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-250 flex flex-col"
                         style={{ minHeight: '200px' }}
                       >

@@ -16,7 +16,8 @@
  * Response: { success: boolean, result?: VideoGenerationResult, error?: string }
  */
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireUser } from '@/lib/server/auth-helpers';
 import { generateVideo, normalizeVideoOptions } from '@/lib/media/video-providers';
 import { resolveVideoApiKey, resolveVideoBaseUrl } from '@/lib/server/provider-config';
 import type { VideoProviderId, VideoGenerationOptions } from '@/lib/media/types';
@@ -29,6 +30,9 @@ const log = createLogger('VideoGeneration API');
 export const maxDuration = 300;
 
 export async function POST(request: NextRequest) {
+  const authResult = await requireUser(request);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const body = (await request.json()) as VideoGenerationOptions;
 

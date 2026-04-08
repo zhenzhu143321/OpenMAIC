@@ -43,6 +43,7 @@ export interface Course {
   major: string;
   description: string;
   teacherName: string;
+  ownerId: string;
   chapters: CourseChapter[];
   status: 'draft' | 'published';
   publishedAt?: string;

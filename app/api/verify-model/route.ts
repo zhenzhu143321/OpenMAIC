@@ -1,4 +1,5 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireUser } from '@/lib/server/auth-helpers';
 import { generateText } from 'ai';
 import { createLogger } from '@/lib/logger';
 import { apiError, apiSuccess } from '@/lib/server/api-response';
@@ -6,6 +7,9 @@ import { resolveModel } from '@/lib/server/resolve-model';
 const log = createLogger('Verify Model');
 
 export async function POST(req: NextRequest) {
+  const authResult = await requireUser(req);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const { apiKey, baseUrl, model, providerType, requiresApiKey } = await req.json();
 

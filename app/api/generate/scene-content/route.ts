@@ -6,7 +6,8 @@
  * Does NOT generate actions — use /api/generate/scene-actions for that.
  */
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireUser } from '@/lib/server/auth-helpers';
 import { callLLM } from '@/lib/ai/llm';
 import {
   applyOutlineFallbacks,
@@ -24,6 +25,9 @@ const log = createLogger('Scene Content API');
 export const maxDuration = 300;
 
 export async function POST(req: NextRequest) {
+  const authResult = await requireUser(req);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const body = await req.json();
     const {

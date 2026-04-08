@@ -1,3 +1,5 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { requireUser } from '@/lib/server/auth-helpers';
 import {
   getServerProviders,
   getServerTTSProviders,
@@ -12,7 +14,10 @@ import { createLogger } from '@/lib/logger';
 
 const log = createLogger('ServerProviders');
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const authResult = await requireUser(req);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     return apiSuccess({
       providers: getServerProviders(),

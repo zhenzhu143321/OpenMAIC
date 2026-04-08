@@ -5,6 +5,8 @@ import type { Scene, Stage, SlideContent } from '@/lib/types/stage';
 import type { Slide } from '@/lib/types/slides';
 import type { SceneOutline } from '@/lib/types/generation';
 
+export type ClassroomVisibility = 'private' | 'course-bound' | 'standalone-published';
+
 function resolveProjectRoot(): string {
   const explicitRoot = process.env.OPENMAIC_PROJECT_ROOT;
   if (explicitRoot) {
@@ -58,10 +60,24 @@ export interface PersistedClassroomData {
   scenes: Scene[];
   outlines?: SceneOutline[];
   createdAt: string;
+  ownerId: string;
+  visibility: ClassroomVisibility;
 }
 
 export function isValidClassroomId(id: string): boolean {
   return /^[a-zA-Z0-9_-]+$/.test(id);
+}
+
+async function getReferencedClassroomIds(): Promise<Set<string>> {
+  const { listCourses } = await import('./course-storage');
+  const courses = await listCourses();
+  const ids = new Set<string>();
+  for (const c of courses) {
+    for (const ch of (c as unknown as { chapters?: Array<{ classroomId?: string }> }).chapters ?? []) {
+      if (ch.classroomId) ids.add(ch.classroomId);
+    }
+  }
+  return ids;
 }
 
 export async function classroomExists(id: string): Promise<boolean> {
@@ -76,21 +92,43 @@ export async function classroomExists(id: string): Promise<boolean> {
 export async function readClassroom(id: string): Promise<PersistedClassroomData | null> {
   // New path: data/classrooms/{id}/classroom.json
   const newPath = path.join(CLASSROOMS_DIR, id, 'classroom.json');
+  let resolvedPath: string | null = null;
+  let data: PersistedClassroomData | null = null;
+
   try {
     const content = await fs.readFile(newPath, 'utf-8');
-    return JSON.parse(content) as PersistedClassroomData;
+    data = JSON.parse(content) as PersistedClassroomData;
+    resolvedPath = newPath;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
   }
-  // Fallback: old path data/classrooms/{id}.json
-  const oldPath = path.join(CLASSROOMS_DIR, `${id}.json`);
-  try {
-    const content = await fs.readFile(oldPath, 'utf-8');
-    return JSON.parse(content) as PersistedClassroomData;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
-    throw error;
+
+  if (!data) {
+    // Fallback: old path data/classrooms/{id}.json
+    const oldPath = path.join(CLASSROOMS_DIR, `${id}.json`);
+    try {
+      const content = await fs.readFile(oldPath, 'utf-8');
+      data = JSON.parse(content) as PersistedClassroomData;
+      resolvedPath = oldPath;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+      throw error;
+    }
   }
+
+  // Migrate legacy classrooms without ownership fields
+  if (!data.ownerId || !data.visibility) {
+    const { ensureAdminExists } = await import('./user-storage');
+    const adminId = await ensureAdminExists().catch(() => 'legacy');
+    const referencedIds = await getReferencedClassroomIds();
+    const visibility: ClassroomVisibility = referencedIds.has(data.id)
+      ? 'course-bound'
+      : 'standalone-published';
+    data = { ...data, ownerId: adminId, visibility };
+    await writeJsonFileAtomic(resolvedPath!, data);
+  }
+
+  return data;
 }
 
 export interface ClassroomListItem {
@@ -182,6 +220,8 @@ export async function persistClassroom(
     stage: Stage;
     scenes: Scene[];
     outlines?: SceneOutline[];
+    ownerId: string;
+    visibility: ClassroomVisibility;
   },
   baseUrl: string,
 ): Promise<PersistedClassroomData & { url: string }> {
@@ -191,6 +231,8 @@ export async function persistClassroom(
     scenes: data.scenes,
     outlines: data.outlines,
     createdAt: new Date().toISOString(),
+    ownerId: data.ownerId,
+    visibility: data.visibility,
   };
 
   await ensureClassroomsDir();

@@ -38,8 +38,8 @@ export const useCourseStore = create<CourseState>((set, get) => ({
     try {
       const res = await fetch('/api/course');
       if (!res.ok) throw new Error('Failed to fetch courses');
-      const courses = await res.json();
-      set({ courses, isLoading: false });
+      const json = await res.json();
+      set({ courses: json.courses ?? json, isLoading: false });
     } catch (error) {
       console.error('fetchCourses failed:', error);
       set({ isLoading: false });
@@ -51,8 +51,8 @@ export const useCourseStore = create<CourseState>((set, get) => ({
     try {
       const res = await fetch(`/api/course?id=${id}`);
       if (!res.ok) throw new Error('Failed to fetch course');
-      const course = await res.json();
-      set({ currentCourse: course, isLoading: false });
+      const json = await res.json();
+      set({ currentCourse: json.course ?? json, isLoading: false });
     } catch (error) {
       console.error('fetchCourse failed:', error);
       set({ isLoading: false });
@@ -65,6 +65,7 @@ export const useCourseStore = create<CourseState>((set, get) => ({
       ...data,
       chapters: [],
       id,
+      ownerId: '',
       status: 'draft',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

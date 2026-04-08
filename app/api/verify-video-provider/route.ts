@@ -14,7 +14,8 @@
  * Response: { success: boolean, message: string }
  */
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireUser } from '@/lib/server/auth-helpers';
 import { testVideoConnectivity } from '@/lib/media/video-providers';
 import { resolveVideoApiKey, resolveVideoBaseUrl } from '@/lib/server/provider-config';
 import type { VideoProviderId } from '@/lib/media/types';
@@ -25,6 +26,9 @@ import { validateUrlForSSRF } from '@/lib/server/ssrf-guard';
 const log = createLogger('VerifyVideoProvider');
 
 export async function POST(request: NextRequest) {
+  const authResult = await requireUser(request);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const providerId = (request.headers.get('x-video-provider') || 'seedance') as VideoProviderId;
     const model = request.headers.get('x-video-model') || undefined;

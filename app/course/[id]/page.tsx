@@ -10,6 +10,7 @@ import { ChapterList } from '@/components/course/chapter-list';
 import { ClassroomPickerDialog } from '@/components/course/classroom-picker-dialog';
 import type { ClassroomMeta, CourseChapterContext, CourseFormData } from '@/lib/types/course';
 import { COURSE_CHAPTER_CONTEXT_KEY } from '@/lib/types/course';
+import type { SafeUser } from '@/lib/types/user';
 import { Card, CardHeader, CardTitle, CardContent, CardAction } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -35,7 +36,7 @@ function CourseDetailContent({ params }: { params: Promise<{ id: string }> }) {
   const { t } = useI18n();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const isViewMode = searchParams.get('mode') === 'view';
+  const urlViewMode = searchParams.get('mode') === 'view';
   const { currentCourse, fetchCourse, updateCourse, addChapter, updateChapter, removeChapter, reorderChapters, publishCourse, unpublishCourse } =
     useCourseStore();
   const [editing, setEditing] = useState(false);
@@ -43,6 +44,20 @@ function CourseDetailContent({ params }: { params: Promise<{ id: string }> }) {
   const [classroomMeta, setClassroomMeta] = useState<Record<string, ClassroomMeta>>({});
   const [bindingChapterId, setBindingChapterId] = useState<string | null>(null);
   const [publishDialog, setPublishDialog] = useState<PublishDialogMode>(null);
+  const [currentUser, setCurrentUser] = useState<SafeUser | null | undefined>(undefined);
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((r) => r.json())
+      .then((d) => { setCurrentUser(d.success ? d.user : null); })
+      .catch(() => { setCurrentUser(null); });
+  }, []);
+
+  // canEdit is null while currentUser is still loading (undefined)
+  const canEdit = currentUser === undefined
+    ? null
+    : ((currentUser?.role === 'teacher' && currentUser?.status === 'active') || currentUser?.role === 'admin');
+  const isViewMode = urlViewMode || canEdit === false;
 
   useEffect(() => {
     params.then(({ id }) => {

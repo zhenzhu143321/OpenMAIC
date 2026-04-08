@@ -5,7 +5,8 @@
  * Used for short-answer (text) questions that cannot be graded locally.
  */
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireUser } from '@/lib/server/auth-helpers';
 import { callLLM } from '@/lib/ai/llm';
 import { createLogger } from '@/lib/logger';
 import { apiError, apiSuccess } from '@/lib/server/api-response';
@@ -26,6 +27,9 @@ interface GradeResponse {
 }
 
 export async function POST(req: NextRequest) {
+  const authResult = await requireUser(req);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const body = (await req.json()) as GradeRequest;
     const { question, userAnswer, points, commentPrompt, language } = body;

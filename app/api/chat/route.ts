@@ -12,7 +12,8 @@
  * the fetch request, which triggers req.signal on the server side.
  */
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireUser } from '@/lib/server/auth-helpers';
 import { statelessGenerate } from '@/lib/orchestration/stateless-generate';
 import type { StatelessChatRequest, StatelessEvent } from '@/lib/types/chat';
 import type { ThinkingConfig } from '@/lib/types/provider';
@@ -41,6 +42,9 @@ export const maxDuration = 60;
  * Response: SSE stream of StatelessEvent
  */
 export async function POST(req: NextRequest) {
+  const authResult = await requireUser(req);
+  if (authResult instanceof NextResponse) return authResult;
+
   const encoder = new TextEncoder();
 
   try {

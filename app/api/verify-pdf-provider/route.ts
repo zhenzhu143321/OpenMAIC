@@ -1,4 +1,5 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireUser } from '@/lib/server/auth-helpers';
 import { createLogger } from '@/lib/logger';
 import { apiError, apiSuccess } from '@/lib/server/api-response';
 import { resolvePDFApiKey, resolvePDFBaseUrl } from '@/lib/server/provider-config';
@@ -7,6 +8,9 @@ import { validateUrlForSSRF } from '@/lib/server/ssrf-guard';
 const log = createLogger('Verify PDF Provider');
 
 export async function POST(req: NextRequest) {
+  const authResult = await requireUser(req);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const { providerId, apiKey, baseUrl } = await req.json();
 

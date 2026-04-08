@@ -15,7 +15,8 @@
  * Response: { success: boolean, result?: ImageGenerationResult, error?: string }
  */
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireUser } from '@/lib/server/auth-helpers';
 import { generateImage, aspectRatioToDimensions } from '@/lib/media/image-providers';
 import { resolveImageApiKey, resolveImageBaseUrl } from '@/lib/server/provider-config';
 import type { ImageProviderId, ImageGenerationOptions } from '@/lib/media/types';
@@ -28,6 +29,9 @@ const log = createLogger('ImageGeneration API');
 export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
+  const authResult = await requireUser(request);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const body = (await request.json()) as ImageGenerationOptions;
 

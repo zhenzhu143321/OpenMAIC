@@ -26,6 +26,7 @@ import { db } from '@/lib/utils/database';
 import { toast } from 'sonner';
 import { createLogger } from '@/lib/logger';
 import { COURSE_CHAPTER_CONTEXT_KEY, type CourseChapterContext } from '@/lib/types/course';
+import { UserMenu } from '@/components/user-menu';
 
 interface HeaderProps {
   readonly currentSceneTitle: string;
@@ -428,6 +429,8 @@ export function Header({ currentSceneTitle }: HeaderProps) {
             </div>
           )}
         </div>
+
+        <UserMenu />
       </header>
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </>

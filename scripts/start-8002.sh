@@ -9,6 +9,14 @@ export OPENMAIC_PROJECT_ROOT="$ROOT_DIR"
 export PORT="${PORT:-8002}"
 export HOSTNAME="${OPENMAIC_HOSTNAME:-0.0.0.0}"
 
+# Load .env.local if present (standalone mode does not auto-load it)
+if [[ -f "$ROOT_DIR/.env.local" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "$ROOT_DIR/.env.local"
+  set +a
+fi
+
 if [[ ! -f .next/standalone/server.js ]]; then
   echo "Missing standalone build: $ROOT_DIR/.next/standalone/server.js" >&2
   echo "Run 'pnpm build' first." >&2

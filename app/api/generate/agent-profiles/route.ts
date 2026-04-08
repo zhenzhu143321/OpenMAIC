@@ -5,7 +5,8 @@
  * based on stage info and scene outlines.
  */
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireUser } from '@/lib/server/auth-helpers';
 import { nanoid } from 'nanoid';
 import { callLLM } from '@/lib/ai/llm';
 import { createLogger } from '@/lib/logger';
@@ -48,6 +49,9 @@ function stripCodeFences(text: string): string {
 }
 
 export async function POST(req: NextRequest) {
+  const authResult = await requireUser(req);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const body = (await req.json()) as RequestBody;
     const { stageInfo, sceneOutlines, language, availableAvatars } = body;

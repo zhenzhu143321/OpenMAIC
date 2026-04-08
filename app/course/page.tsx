@@ -6,8 +6,10 @@ import { motion } from 'motion/react';
 import { useI18n } from '@/lib/hooks/use-i18n';
 import { useCourseStore } from '@/lib/store/course';
 import type { CourseListItem } from '@/lib/types/course';
+import type { SafeUser } from '@/lib/types/user';
 import { CourseForm } from '@/components/course/course-form';
 import { Button } from '@/components/ui/button';
+import { UserMenu } from '@/components/user-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -44,9 +46,10 @@ interface CourseCardProps {
   onOpen: () => void;
   onDelete: () => void;
   chapterLabel: string;
+  canManage: boolean;
 }
 
-function CourseCard({ course, index, onOpen, onDelete, chapterLabel }: CourseCardProps) {
+function CourseCard({ course, index, onOpen, onDelete, chapterLabel, canManage }: CourseCardProps) {
   const cover = coverFor(course.id);
 
   return (
@@ -88,13 +91,15 @@ function CourseCard({ course, index, onOpen, onDelete, chapterLabel }: CourseCar
               <BookOpen className="size-2.5" />
               {course.chapterCount} {chapterLabel}
             </span>
-            <button
-              className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white/15 hover:bg-white/30 backdrop-blur-sm text-white p-1 rounded-lg"
-              onClick={(e) => { e.stopPropagation(); onDelete(); }}
-              aria-label="删除课程"
-            >
-              <Trash2 className="size-3" />
-            </button>
+            {canManage && (
+              <button
+                className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white/15 hover:bg-white/30 backdrop-blur-sm text-white p-1 rounded-lg"
+                onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                aria-label="删除课程"
+              >
+                <Trash2 className="size-3" />
+              </button>
+            )}
           </div>
           {/* Course name on gradient */}
           <h2 className="relative z-10 text-[13px] font-bold text-white leading-snug line-clamp-1 tracking-tight drop-shadow-sm">
@@ -135,10 +140,17 @@ export default function CoursePage() {
   const { courses, fetchCourses, createCourse, deleteCourse } = useCourseStore();
   const [showForm, setShowForm] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<SafeUser | null>(null);
 
   useEffect(() => {
     fetchCourses();
+    fetch('/api/auth/me')
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setCurrentUser(d.user); })
+      .catch(() => {});
   }, [fetchCourses]);
+
+  const canManage = (currentUser?.role === 'teacher' && currentUser?.status === 'active') || currentUser?.role === 'admin';
 
   const handleCreate = async (data: Parameters<typeof createCourse>[0]) => {
     await createCourse(data);
@@ -174,10 +186,15 @@ export default function CoursePage() {
             </Button>
             <h1 className="text-2xl font-bold text-foreground">{t('course.myCourses')}</h1>
           </div>
-          <Button onClick={() => setShowForm(true)}>
-            <Plus />
-            {t('course.create')}
-          </Button>
+          <div className="flex items-center gap-3">
+            {canManage && (
+              <Button onClick={() => setShowForm(true)}>
+                <Plus />
+                {t('course.create')}
+              </Button>
+            )}
+            <UserMenu user={currentUser} />
+          </div>
         </motion.div>
 
         {/* Empty state */}
@@ -193,10 +210,12 @@ export default function CoursePage() {
             </div>
             <p className="text-lg font-medium text-foreground mb-2">{t('course.emptyStateTitle')}</p>
             <p className="text-muted-foreground text-sm mb-6">{t('course.emptyStateDesc')}</p>
-            <Button onClick={() => setShowForm(true)}>
-              <Plus />
-              {t('course.create')}
-            </Button>
+            {canManage && (
+              <Button onClick={() => setShowForm(true)}>
+                <Plus />
+                {t('course.create')}
+              </Button>
+            )}
           </motion.div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -208,6 +227,7 @@ export default function CoursePage() {
                 onOpen={() => router.push(`/course/${course.id}`)}
                 onDelete={() => setDeletingId(course.id)}
                 chapterLabel={t('course.chapter')}
+                canManage={canManage}
               />
             ))}
           </div>

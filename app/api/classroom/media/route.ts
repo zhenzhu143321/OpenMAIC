@@ -4,6 +4,7 @@ import path from 'path';
 import { apiSuccess, apiError, API_ERROR_CODES } from '@/lib/server/api-response';
 import { isValidClassroomId } from '@/lib/server/classroom-storage';
 import { listMedia, saveMedia, getMediaPath, mediaExists } from '@/lib/server/media-storage';
+import { requireUser, requireRole } from '@/lib/server/auth-helpers';
 
 const MIME_MAP: Record<string, string> = {
   '.mp3': 'audio/mpeg',
@@ -18,6 +19,9 @@ const MIME_MAP: Record<string, string> = {
 const MAX_UPLOAD_SIZE = 50 * 1024 * 1024; // 50MB
 
 export async function GET(request: NextRequest) {
+  const authResult = await requireUser(request);
+  if (authResult instanceof NextResponse) return authResult;
+
   const id = request.nextUrl.searchParams.get('id');
   if (!id || !isValidClassroomId(id)) {
     return apiError(API_ERROR_CODES.INVALID_REQUEST, 400, 'Invalid or missing classroom id');
@@ -60,6 +64,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const authResult = await requireRole(request, 'teacher', 'admin');
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const body = await request.json();
     const { classroomId, fileId, ext, base64 } = body;

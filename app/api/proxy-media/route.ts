@@ -12,6 +12,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { requireUser } from '@/lib/server/auth-helpers';
 import { validateUrlForSSRF } from '@/lib/server/ssrf-guard';
 import { apiError } from '@/lib/server/api-response';
 import { createLogger } from '@/lib/logger';
@@ -21,6 +22,9 @@ const log = createLogger('ProxyMedia');
 export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
+  const authResult = await requireUser(request);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const { url } = await request.json();
 
