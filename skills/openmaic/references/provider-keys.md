@@ -2,56 +2,55 @@
 
 ## Critical Boundary
 
-OpenMAIC generation does not automatically reuse the OpenClaw agent's current model or API key.
+OpenMAIC generation does **not** automatically reuse the OpenClaw agent's current model or API key.
 
-OpenMAIC server APIs resolve their own model and provider keys from OpenMAIC server-side config.
+OpenMAIC server APIs resolve their own providers and secrets from OpenMAIC server-side config.
 
-This skill does not rely on runtime overrides for model, provider, API key, base URL, or provider type.
+Do not rely on runtime overrides for:
+- model
+- provider
+- API key
+- base URL
+- provider type
 
-If the user wants to change any of those, they must edit OpenMAIC server-side config files.
+If the user wants to change any of those, they must update OpenMAIC server-side config.
 
 ## Interaction Policy
 
 - Do not begin by asking the user to paste an API key into chat.
-- First, recommend a provider path.
-- Then ask how the user wants to configure it.
+- First recommend a provider path.
+- Then ask which config file they want to edit.
 - The user should edit `.env.local` or `server-providers.yml` themselves.
-- Do not offer to write the key for them.
+- Do not offer to write the secret for them.
 - Do not ask for the literal key in chat.
-- Do not suggest temporary request-time overrides.
-- If generation fails because of auth, provider, or model selection, direct the user back to server-side config files.
+- If generation fails due to auth/provider/model config, direct the user back to the server-side config file.
+
+## Auth Prerequisite for Local Setup
+
+If the user is running OpenMAIC locally for the first time, remind them that current builds also expect auth config for full teacher/admin flows:
+
+```env
+AUTH_SECRET=<openssl rand -hex 32>
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=<set a password>
+```
+
+Without this, bootstrap admin login may fail on a fresh instance.
 
 ## Preferred User Flow
 
 1. Recommend a provider option.
 2. Ask where the user wants to configure it:
-   - `.env.local` (recommended for most users)
+   - `.env.local` (recommended)
    - `server-providers.yml`
-3. Tell the user exactly which variables or YAML fields to edit.
-4. Wait for the user to confirm they finished editing before continuing.
+3. Tell the user exactly which keys to edit.
+4. Wait for confirmation before continuing.
 
 ## Recommendation Paths
 
-### 1. Lowest-Friction Setup
+### 1. Lowest-Friction LLM Setup
 
-Recommended when the user wants the smallest amount of configuration.
-
-Set:
-
-```env
-ANTHROPIC_API_KEY=sk-ant-...
-```
-
-Why:
-
-- OpenMAIC server fallback is currently `gpt-4o-mini` if `DEFAULT_MODEL` is unset.
-- If the user wants Anthropic or Google by default, they should set `DEFAULT_MODEL` explicitly.
-
-### 2. Better Speed / Cost Balance
-
-Recommended when the user is willing to set one extra variable.
-
-Set:
+Recommended when the user wants the simplest path.
 
 ```env
 GOOGLE_API_KEY=...
@@ -59,14 +58,13 @@ DEFAULT_MODEL=google:gemini-3-flash-preview
 ```
 
 Why:
+- strong quality / speed balance
+- matches the repo's current default recommendation
+- works well for classroom generation
 
-- Good quality-to-speed balance
-- Matches the repo's current recommendation direction better than the default fallback
-- The `google:` prefix is important. Without a provider prefix, model parsing defaults to OpenAI.
+### 2. Alternative LLM Paths
 
-### 3. Existing Provider Reuse
-
-Use when the user already has OpenAI or another supported provider configured and wants to stick with it.
+Use when the user already prefers another provider.
 
 Examples:
 
@@ -76,22 +74,42 @@ DEFAULT_MODEL=openai:gpt-4o-mini
 ```
 
 ```env
-DEEPSEEK_API_KEY=...
-DEFAULT_MODEL=deepseek:deepseek-chat
+ANTHROPIC_API_KEY=sk-ant-...
+DEFAULT_MODEL=anthropic:claude-3-5-haiku-20241022
 ```
+
+```env
+QN_API_KEY=...
+DEFAULT_MODEL=qn:gemini-3.1-pro-preview
+```
+
+### 3. TTS / Image Add-Ons
+
+If the user wants server-side voice or image generation, point them at the matching server-side keys.
+
+Examples:
+
+```env
+TTS_QNAIGC_API_KEY=...
+IMAGE_QNAIGC_API_KEY=...
+```
+
+Current built-in categories:
+- **TTS**: OpenAI, Azure, GLM, Qwen, QNAIGC
+- **Image**: Seedream, Qwen Image, Nano Banana, QNAIGC Image
+- **Video**: Seedance, Kling, Veo, Sora
+- **PDF**: unpdf, MinerU
 
 ## Model String Rule
 
-When recommending or showing `DEFAULT_MODEL`, always include the provider prefix:
+When recommending `DEFAULT_MODEL`, always include the provider prefix:
 
 - `google:gemini-3-flash-preview`
 - `anthropic:claude-3-5-haiku-20241022`
 - `openai:gpt-4o-mini`
-- `deepseek:deepseek-chat`
+- `qn:gemini-3.1-pro-preview`
 
-Do not recommend bare model IDs such as `gemini-3-flash-preview` by themselves, because OpenMAIC will otherwise parse them as OpenAI models.
-
-Do not work around a wrong `DEFAULT_MODEL` by changing request parameters. The user should fix the server-side config instead.
+Do **not** recommend bare model IDs such as `gemini-3-flash-preview`, because OpenMAIC will otherwise parse them as OpenAI models.
 
 ## Preferred Config Method
 
@@ -101,37 +119,31 @@ For first setup, prefer `.env.local`:
 cp .env.example .env.local
 ```
 
-Then fill the chosen keys.
+Then edit the chosen keys.
 
 Alternative: `server-providers.yml`
 
 ```yaml
 providers:
-  anthropic:
-    apiKey: sk-ant-...
-
   google:
     apiKey: ...
+
+  anthropic:
+    apiKey: sk-ant-...
 
   openai:
     apiKey: sk-...
 ```
 
-If using a non-default provider for classroom generation, also set the model selection explicitly:
-
-```env
-DEFAULT_MODEL=google:gemini-3-flash-preview
-```
+If using Google or another non-default provider for classroom generation, also set `DEFAULT_MODEL` explicitly.
 
 ## Recommended Prompts To The User
 
 Preferred:
-
 - "I recommend configuring OpenMAIC through `.env.local` first. Please edit that file locally and tell me when you're done."
-- "For the simplest setup, I recommend Anthropic. For better speed/cost balance, I recommend Google plus `DEFAULT_MODEL=google:gemini-3-flash-preview`. Which path do you want?"
+- "For the simplest setup, I recommend Google plus `DEFAULT_MODEL=google:gemini-3-flash-preview`. Do you want to configure that in `.env.local` or `server-providers.yml`?"
 
 Avoid as the first move:
-
 - "Send me your API key"
 - "Paste your API key here"
 - "Do you want me to write the key for you?"
@@ -139,8 +151,7 @@ Avoid as the first move:
 ## Confirmation Requirements
 
 - Recommend one provider path first.
-- Ask the user which config-file path they want.
+- Ask which config-file path the user wants.
 - Instruct the user to modify the file themselves.
-- Wait for the user to confirm they finished editing before continuing.
+- Wait for confirmation before continuing.
 - Do not request the literal key.
-- If provider/model/auth errors happen later, tell the user exactly which config entry to fix and wait for confirmation before retrying.

@@ -38,21 +38,27 @@
 
 ## 🗞️ 动态
 
+- **2026-04-13** — 文档已整体对齐到当前代码状态：认证权限、课程级发布、8002 standalone 部署、QNAIGC 媒体支持。
+- **2026-04-07** — 用户认证与角色权限上线：登录/注册、管理员用户管理、ownership 校验、角色感知 UI。
+- **2026-04-01** — 新增 QNAIGC / 七牛云 TTS（38 个音色）与 QNAIGC 图片生成。
 - **2026-03-26** — [v0.1.0 发布！](https://github.com/THU-MAIC/OpenMAIC/releases/tag/v0.1.0) 讨论语音、沉浸模式、键盘快捷键、白板增强、新 provider 等。查看[更新日志](CHANGELOG.md)。
 
 ## 📖 项目简介
 
-**OpenMAIC**（Open Multi-Agent Interactive Classroom）是一个开源的 AI 互动课堂平台，能够将任何主题或文档转化为丰富的互动学习体验。基于多智能体协作引擎，它可以自动生成演示幻灯片、测验、交互式模拟实验和项目制学习活动——由 AI 教师和 AI 同学进行语音讲解、白板绘图，并与你展开实时讨论。内置 [OpenClaw](https://github.com/openclaw/openclaw) 集成，你还可以直接在飞书、Slack、Telegram 等聊天应用中生成课堂。
+**OpenMAIC**（Open Multi-Agent Interactive Classroom）是一个开源的 AI 互动课堂平台，可将主题、文档和教学需求转化为沉浸式互动课堂。项目当前不仅包含两阶段课堂生成、多智能体讲授/讨论、语音与白板能力，也已经具备 **课程/章节管理**、**课程级发布**、**服务端课堂与媒体持久化**，以及面向 admin / teacher / student 的**最小权限体系**。
+
+内置 [OpenClaw](https://github.com/openclaw/openclaw) 集成后，你还可以直接在飞书、Slack、Telegram 等聊天应用中生成课堂。
 
 https://github.com/user-attachments/assets/dbd013f6-9fab-43c5-a788-b47126cff7a8
 
 ### 核心亮点
 
-- **一键生成课堂** — 描述一个主题或附上学习材料，AI 几分钟内构建完整课堂
-- **多智能体课堂** — AI 老师和智能体同学实时授课、讨论、互动
+- **一键生成课堂** — 根据主题、提示词或文档，几分钟内生成完整课堂
+- **课程优先的建课方式** — 按章节组织课堂、绑定到课程，并以课程为单位发布
+- **角色化平台** — 内置 admin / teacher / student 角色与 ownership 权限校验
 - **丰富的场景类型** — 幻灯片、测验、HTML 交互式模拟、项目制学习（PBL）
-- **白板 & 语音** — 智能体实时绘制图表、书写公式、语音讲解
-- **灵活导出** — 下载可编辑的 `.pptx` 幻灯片或交互式 `.html` 网页
+- **服务端媒体流水线** — 课堂与图片/音频缓存可落盘到服务器
+- **灵活的 provider 矩阵** — 支持 LLM、TTS、图片、视频、PDF、搜索等多类能力，已接入 QNAIGC
 - **[OpenClaw 集成](#-openclaw-集成)** — 通过 AI 助手在飞书、Slack、Telegram 等 20+ 聊天应用中直接生成课堂
 
 ---
@@ -95,43 +101,50 @@ pnpm install
 cp .env.example .env.local
 ```
 
-至少填写一个 LLM 服务商的 API Key：
+建议最少配置：
 
 ```env
-OPENAI_API_KEY=sk-...
-ANTHROPIC_API_KEY=sk-ant-...
+# LLM（任选一个）
 GOOGLE_API_KEY=...
+DEFAULT_MODEL=google:gemini-3-flash-preview
+
+# Auth（建议本地完整测试时配置）
+AUTH_SECRET=<openssl rand -hex 32>
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=change-me
 ```
 
-也可以通过 `server-providers.yml` 配置服务商：
+当前可选类别包括：
+- **LLM**：OpenAI、Anthropic、Google、DeepSeek、Qwen、Kimi、MiniMax、GLM、SiliconFlow、Doubao、QN
+- **TTS**：OpenAI、Azure、GLM、Qwen、QNAIGC
+- **Image**：Seedream、Qwen Image、Nano Banana、QNAIGC Image
+- **Video**：Seedance、Kling、Veo、Sora
+- **PDF**：unpdf、MinerU
 
-```yaml
-providers:
-  openai:
-    apiKey: sk-...
-  anthropic:
-    apiKey: sk-ant-...
-```
-
-支持的服务商：**OpenAI**、**Anthropic**、**Google Gemini**、**DeepSeek** 以及任何兼容 OpenAI API 的服务。
+也可以通过 `server-providers.yml` 配置服务商。
 
 > **推荐模型：** **Gemini 3 Flash** — 效果与速度的最佳平衡。追求最高质量可选 **Gemini 3.1 Pro**（速度较慢）。
 >
-> 如果希望 OpenMAIC 服务端默认走 Gemini，还需要额外设置 `DEFAULT_MODEL=google:gemini-3-flash-preview`。
+> 如果希望启用七牛云服务端语音/生图，请额外设置 `TTS_QNAIGC_API_KEY` 和/或 `IMAGE_QNAIGC_API_KEY`。
 
-### 3. 启动
+### 3. 启动（开发模式）
 
 ```bash
 pnpm dev
 ```
 
-打开 **http://localhost:3000** 开始学习！
+打开 **http://localhost:3000**。
 
-### 4. 生产环境构建
+如果配置了 `ADMIN_USERNAME` / `ADMIN_PASSWORD`，首次登录后可直接使用 bootstrap 管理员；否则也可以先通过 `/register` 注册普通用户。
+
+### 4. 本地生产式运行
 
 ```bash
-pnpm build && pnpm start
+pnpm build
+PORT=3000 ./scripts/start-8002.sh
 ```
+
+> 对于长期运行的内网 `8002` 服务，请使用 [`RUNBOOK-8002.md`](RUNBOOK-8002.md) 中的 standalone 流程，不要再使用 `pnpm start`。
 
 ### Vercel 部署
 
@@ -287,7 +300,7 @@ cp -R /path/to/OpenMAIC/skills/openmaic ~/.openclaw/skills/openmaic
 | 阶段 | skill 会做什么 |
 |------|------|
 | **Clone** | 检测现有仓库，或在执行 clone / 安装依赖前征求确认 |
-| **启动** | 在 `pnpm dev`、`pnpm build && pnpm start`、Docker 之间选择 |
+| **启动** | 在 `pnpm dev`、`pnpm build && PORT=3000 ./scripts/start-8002.sh`、Docker 之间选择 |
 | **Provider Key** | 推荐配置路径，引导你自己编辑 `.env.local` |
 | **生成** | 提交异步生成任务，轮询进度直到完成 |
 
@@ -322,7 +335,9 @@ cp -R /path/to/OpenMAIC/skills/openmaic ~/.openclaw/skills/openmaic
 
 ### 更多功能
 
-- **语音合成（TTS）** — 多种语音服务商，支持自定义音色
+- **角色权限体系** — 支持 admin / teacher / student，含审核与禁用控制
+- **课程级发布** — 课程草稿 / 发布态、章节绑定、公共课程查看模式
+- **语音合成（TTS）** — 多种语音服务商，含 QNAIGC 38 音色目录
 - **语音识别** — 通过麦克风与 AI 老师对话
 - **网络搜索** — 智能体在课堂中搜索网络获取最新信息
 - **国际化** — 界面支持中文和英文
@@ -378,55 +393,47 @@ cp -R /path/to/OpenMAIC/skills/openmaic ~/.openclaw/skills/openmaic
 ```
 OpenMAIC/
 ├── app/                        # Next.js App Router
-│   ├── api/                    #   服务端 API 路由（约 18 个端点）
-│   │   ├── generate/           #     场景生成流水线（大纲、内容、图片、TTS…）
-│   │   ├── generate-classroom/ #     异步课堂生成提交与轮询
-│   │   ├── chat/               #     多智能体讨论（SSE 流式传输）
-│   │   ├── pbl/                #     项目制学习端点
-│   │   └── ...                 #     quiz-grade, parse-pdf, web-search, transcription 等
-│   ├── classroom/[id]/         #   课堂回放页面
-│   └── page.tsx                #   首页（生成输入）
+│   ├── api/                    #   ~31 个服务端路由处理器
+│   │   ├── auth/               #     登录 / 注册 / 登出 / 当前用户
+│   │   ├── admin/              #     管理员用户管理
+│   │   ├── course/             #     课程 + 章节 CRUD
+│   │   ├── classroom/          #     课堂 + 媒体持久化
+│   │   ├── generate/           #     大纲 / 内容 / 动作 / TTS / 图片 / 视频
+│   │   ├── generate-classroom/ #     异步课堂任务提交与轮询
+│   │   └── ...                 #     chat、pbl、quiz-grade、parse-pdf、web-search、verify-* 
+│   ├── classroom/[id]/         #   课堂回放页
+│   ├── course/                 #   课程列表与课程详情页
+│   ├── login/                  #   登录页
+│   ├── register/               #   注册页
+│   ├── admin/                  #   管理后台
+│   └── page.tsx                #   首页（生成 + 课程 + 独立课堂）
 │
 ├── lib/                        # 核心业务逻辑
 │   ├── generation/             #   两阶段课堂生成流水线
-│   ├── orchestration/          #   LangGraph 多智能体编排（导演图）
-│   ├── playback/               #   回放状态机（idle → playing → live）
-│   ├── action/                 #   动作执行引擎（语音、白板、特效）
-│   ├── ai/                     #   LLM 服务商抽象层
-│   ├── api/                    #   Stage API 门面（幻灯片/画布/场景操作）
+│   ├── orchestration/          #   LangGraph 多智能体编排
+│   ├── playback/               #   回放 / 讨论状态机
+│   ├── action/                 #   语音、白板、聚光灯、激光笔等动作执行
+│   ├── server/                 #   认证、存储、provider 配置、模型解析
 │   ├── store/                  #   Zustand 状态管理
-│   ├── types/                  #   集中式 TypeScript 类型定义
-│   ├── audio/                  #   TTS & ASR 服务商
-│   ├── media/                  #   图片 & 视频生成服务商
-│   ├── export/                 #   PPTX & HTML 导出
-│   ├── hooks/                  #   React 自定义 Hooks（55+）
-│   ├── i18n/                   #   国际化（zh-CN, en-US）
-│   └── ...                     #   prosemirror, storage, pdf, web-search, utils
+│   ├── audio/                  #   TTS & ASR providers
+│   ├── media/                  #   图片 & 视频 providers
+│   ├── i18n/                   #   zh-CN / en-US 词典
+│   └── ...                     #   export、hooks、pdf、web-search、utils
 │
 ├── components/                 # React UI 组件
+│   ├── course/                 #   课程卡片、表单、章节 UI、课堂选择器
 │   ├── slide-renderer/         #   基于 Canvas 的幻灯片编辑器和渲染器
-│   │   ├── Editor/Canvas/      #     交互式编辑画布
-│   │   └── components/element/ #     元素渲染器（文本、图片、形状、表格、图表…）
-│   ├── scene-renderers/        #   测验、交互、PBL 场景渲染器
-│   ├── generation/             #   课堂生成工具栏和进度
-│   ├── chat/                   #   聊天区域和会话管理
-│   ├── settings/               #   设置面板（服务商、TTS、ASR、媒体…）
-│   ├── whiteboard/             #   基于 SVG 的白板绘图
-│   ├── agent/                  #   智能体头像、配置、信息栏
-│   ├── ui/                     #   基础 UI 组件（shadcn/ui + Radix）
-│   └── ...                     #   audio, roundtable, stage, ai-elements
+│   ├── scene-renderers/        #   quiz / interactive / PBL 场景
+│   ├── settings/               #   provider、音频、媒体、语言设置
+│   ├── whiteboard/             #   SVG 白板
+│   └── ...                     #   chat、audio、stage、roundtable、ui
 │
-├── packages/                   # 工作区子包
-│   ├── pptxgenjs/              #   定制化 PowerPoint 生成
-│   └── mathml2omml/            #   MathML → Office Math 转换
-│
-├── skills/                     # OpenClaw / ClawHub skills
-│   └── openmaic/               #   OpenMAIC 引导式 SOP skill
-│       ├── SKILL.md            #   轻量路由层 + 确认规则
-│       └── references/         #   按需加载的 SOP 分段
-│
-├── configs/                    # 共享常量（形状、字体、快捷键、主题…）
-└── public/                     # 静态资源（logo、头像）
+├── data/                       # JSON 持久化（users / courses / classrooms / jobs）
+├── scripts/                    # start-8002、媒体回填等运维脚本
+├── skills/                     # OpenClaw / ClawHub skill 文件
+├── docs/                       # 方案、计划、测试说明等文档
+├── packages/                   # workspace 子包
+└── public/                     # logo 与静态资源
 ```
 
 ### 核心架构

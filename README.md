@@ -38,21 +38,27 @@
 
 ## 🗞️ News
 
+- **2026-04-13** — Documentation refreshed to match the current codebase: auth/permission, course-first publishing, standalone 8002 deployment, and QNAIGC media support.
+- **2026-04-07** — Role-based auth shipped: login/register, admin user management, ownership checks, and role-aware UI.
+- **2026-04-01** — Added QNAIGC / Qiniu Cloud TTS (38 voices) and QNAIGC image generation.
 - **2026-03-26** — [v0.1.0 released!](https://github.com/THU-MAIC/OpenMAIC/releases/tag/v0.1.0) Discussion TTS, immersive mode, keyboard shortcuts, whiteboard enhancements, new providers, and more. See [changelog](CHANGELOG.md).
 
 ## 📖 Overview
 
-**OpenMAIC** (Open Multi-Agent Interactive Classroom) is an open-source AI platform that turns any topic or document into a rich, interactive classroom experience. Powered by multi-agent orchestration, it generates slides, quizzes, interactive simulations, and project-based learning activities — all delivered by AI teachers and AI classmates who can speak, draw on a whiteboard, and engage in real-time discussions with you. With built-in [OpenClaw](https://github.com/openclaw/openclaw) integration, you can generate classrooms directly from messaging apps like Feishu, Slack, or Telegram.
+**OpenMAIC** (Open Multi-Agent Interactive Classroom) is an open-source AI platform that turns topics, documents, and teaching requirements into interactive classrooms. It combines two-stage lesson generation, multi-agent teaching/discussion, voice narration, whiteboard actions, and rich scene rendering. The current project also includes **course/chapter management**, **course-level publishing**, **server-side classroom/media persistence**, and a **minimal auth/permission system** for admin/teacher/student roles.
+
+With built-in [OpenClaw](https://github.com/openclaw/openclaw) integration, you can generate classrooms directly from messaging apps like Feishu, Slack, or Telegram.
 
 https://github.com/user-attachments/assets/b4ab35ac-f994-46b1-8957-e82fe87ff0e9
 
 ### Highlights
 
-- **One-click lesson generation** — Describe a topic or attach your materials; the AI builds a full lesson in minutes
-- **Multi-agent classroom** — AI teachers and peers lecture, discuss, and interact with you in real time
+- **One-click classroom generation** — Turn a topic, requirement, or document into a complete classroom in minutes
+- **Course-first authoring** — Organize classrooms into chapters, bind them into courses, and publish at the course level
+- **Role-based platform** — Built-in admin / teacher / student roles with ownership-aware APIs and UI
 - **Rich scene types** — Slides, quizzes, interactive HTML simulations, and project-based learning (PBL)
-- **Whiteboard & TTS** — Agents draw diagrams, write formulas, and explain out loud
-- **Export anywhere** — Download editable `.pptx` slides or interactive `.html` pages
+- **Server-side media pipeline** — Persist classrooms and cache generated audio/images on the server
+- **Flexible provider matrix** — LLM, TTS, image, video, PDF, and web-search integrations including QNAIGC support
 - **[OpenClaw integration](#-openclaw-integration)** — Generate classrooms from Feishu, Slack, Telegram, and 20+ messaging apps via your AI assistant
 
 ---
@@ -95,43 +101,50 @@ pnpm install
 cp .env.example .env.local
 ```
 
-Fill in at least one LLM provider key:
+Recommended minimum `.env.local`:
 
 ```env
-OPENAI_API_KEY=sk-...
-ANTHROPIC_API_KEY=sk-ant-...
+# LLM (pick one)
 GOOGLE_API_KEY=...
+DEFAULT_MODEL=google:gemini-3-flash-preview
+
+# Auth (recommended for full local testing)
+AUTH_SECRET=<openssl rand -hex 32>
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=change-me
 ```
 
-You can also configure providers via `server-providers.yml`:
+Optional current categories include:
+- **LLM**: OpenAI, Anthropic, Google, DeepSeek, Qwen, Kimi, MiniMax, GLM, SiliconFlow, Doubao, QN
+- **TTS**: OpenAI, Azure, GLM, Qwen, QNAIGC
+- **Image**: Seedream, Qwen Image, Nano Banana, QNAIGC Image
+- **Video**: Seedance, Kling, Veo, Sora
+- **PDF**: unpdf, MinerU
 
-```yaml
-providers:
-  openai:
-    apiKey: sk-...
-  anthropic:
-    apiKey: sk-ant-...
-```
-
-Supported providers: **OpenAI**, **Anthropic**, **Google Gemini**, **DeepSeek**, and any OpenAI-compatible API.
+You can also configure providers via `server-providers.yml`.
 
 > **Recommended model:** **Gemini 3 Flash** — best balance of quality and speed. For highest quality (at slower speed), try **Gemini 3.1 Pro**.
 >
-> If you want OpenMAIC server APIs to use Gemini by default, also set `DEFAULT_MODEL=google:gemini-3-flash-preview`.
+> If you want server-generated media with Qiniu Cloud, also set `TTS_QNAIGC_API_KEY` and/or `IMAGE_QNAIGC_API_KEY`.
 
-### 3. Run
+### 3. Run (Development)
 
 ```bash
 pnpm dev
 ```
 
-Open **http://localhost:3000** and start learning!
+Open **http://localhost:3000**.
 
-### 4. Build for Production
+If you set `ADMIN_USERNAME` / `ADMIN_PASSWORD`, you can log in as the bootstrap admin after the first login attempt; otherwise you can still register normal users from `/register`.
+
+### 4. Production-Like Local Run
 
 ```bash
-pnpm build && pnpm start
+pnpm build
+PORT=3000 ./scripts/start-8002.sh
 ```
+
+> For the long-running internal `8002` service, use the standalone workflow in [`RUNBOOK-8002.md`](RUNBOOK-8002.md). Do **not** use `pnpm start` for that service.
 
 ### Vercel Deployment
 
@@ -287,7 +300,7 @@ cp -R /path/to/OpenMAIC/skills/openmaic ~/.openclaw/skills/openmaic
 | Phase | What the skill does |
 |------|-------------|
 | **Clone** | Detect an existing checkout or ask before cloning/installing |
-| **Startup** | Choose between `pnpm dev`, `pnpm build && pnpm start`, or Docker |
+| **Startup** | Choose between `pnpm dev`, `pnpm build && PORT=3000 ./scripts/start-8002.sh`, or Docker |
 | **Provider Keys** | Recommend a provider path; you edit `.env.local` yourself |
 | **Generation** | Submit an async generation job and poll until it completes |
 
@@ -322,7 +335,9 @@ Optional config in `~/.openclaw/openclaw.json`:
 
 ### And More
 
-- **Text-to-Speech** — Multiple voice providers with customizable voices
+- **Role-based auth** — Admin / teacher / student flows with approval and disable controls
+- **Course publishing** — Draft/published courses, chapter binding, and public course view mode
+- **Text-to-Speech** — Multiple voice providers with customizable voices, including QNAIGC's 38-voice catalog
 - **Speech Recognition** — Talk to your AI teacher using your microphone
 - **Web Search** — Agents search the web for up-to-date information during class
 - **i18n** — Interface supports Chinese and English
@@ -378,55 +393,47 @@ We welcome contributions from the community! Whether it's bug reports, feature i
 ```
 OpenMAIC/
 ├── app/                        # Next.js App Router
-│   ├── api/                    #   Server API routes (~18 endpoints)
-│   │   ├── generate/           #     Scene generation pipeline (outlines, content, images, TTS …)
-│   │   ├── generate-classroom/ #     Async classroom job submission + polling
-│   │   ├── chat/               #     Multi-agent discussion (SSE streaming)
-│   │   ├── pbl/                #     Project-Based Learning endpoints
-│   │   └── ...                 #     quiz-grade, parse-pdf, web-search, transcription, etc.
-│   ├── classroom/[id]/         #   Classroom playback page
-│   └── page.tsx                #   Home page (generation input)
+│   ├── api/                    #   ~31 server route handlers
+│   │   ├── auth/               #     login / register / logout / current user
+│   │   ├── admin/              #     admin user management
+│   │   ├── course/             #     course + chapter CRUD
+│   │   ├── classroom/          #     classroom + media persistence
+│   │   ├── generate/           #     outline / content / actions / TTS / image / video
+│   │   ├── generate-classroom/ #     async classroom job submission + polling
+│   │   └── ...                 #     chat, pbl, quiz-grade, parse-pdf, web-search, verify-*
+│   ├── classroom/[id]/         #   classroom playback page
+│   ├── course/                 #   course list + course detail pages
+│   ├── login/                  #   login page
+│   ├── register/               #   register page
+│   ├── admin/                  #   admin page
+│   └── page.tsx                #   homepage (generation + courses + standalone classrooms)
 │
 ├── lib/                        # Core business logic
-│   ├── generation/             #   Two-stage lesson generation pipeline
-│   ├── orchestration/          #   LangGraph multi-agent orchestration (director graph)
-│   ├── playback/               #   Playback state machine (idle → playing → live)
-│   ├── action/                 #   Action execution engine (speech, whiteboard, effects)
-│   ├── ai/                     #   LLM provider abstraction
-│   ├── api/                    #   Stage API facade (slide/canvas/scene manipulation)
+│   ├── generation/             #   two-stage lesson generation pipeline
+│   ├── orchestration/          #   LangGraph multi-agent orchestration
+│   ├── playback/               #   playback/live discussion state machine
+│   ├── action/                 #   speech, whiteboard, spotlight, laser, etc.
+│   ├── server/                 #   auth, storage, provider config, model resolution
 │   ├── store/                  #   Zustand state stores
-│   ├── types/                  #   Centralized TypeScript type definitions
 │   ├── audio/                  #   TTS & ASR providers
-│   ├── media/                  #   Image & video generation providers
-│   ├── export/                 #   PPTX & HTML export
-│   ├── hooks/                  #   React custom hooks (55+)
-│   ├── i18n/                   #   Internationalization (zh-CN, en-US)
-│   └── ...                     #   prosemirror, storage, pdf, web-search, utils
+│   ├── media/                  #   image & video providers
+│   ├── i18n/                   #   zh-CN / en-US dictionaries
+│   └── ...                     #   export, hooks, pdf, web-search, utils
 │
 ├── components/                 # React UI components
-│   ├── slide-renderer/         #   Canvas-based slide editor & renderer
-│   │   ├── Editor/Canvas/      #     Interactive editing canvas
-│   │   └── components/element/ #     Element renderers (text, image, shape, table, chart …)
-│   ├── scene-renderers/        #   Quiz, Interactive, PBL scene renderers
-│   ├── generation/             #   Lesson generation toolbar & progress
-│   ├── chat/                   #   Chat area & session management
-│   ├── settings/               #   Settings panel (providers, TTS, ASR, media …)
-│   ├── whiteboard/             #   SVG-based whiteboard drawing
-│   ├── agent/                  #   Agent avatar, config, info bar
-│   ├── ui/                     #   Base UI primitives (shadcn/ui + Radix)
-│   └── ...                     #   audio, roundtable, stage, ai-elements
+│   ├── course/                 #   course cards, forms, chapter UI, classroom picker
+│   ├── slide-renderer/         #   canvas-based slide editor & renderer
+│   ├── scene-renderers/        #   quiz / interactive / PBL scenes
+│   ├── settings/               #   provider, audio, media, language settings
+│   ├── whiteboard/             #   SVG whiteboard
+│   └── ...                     #   chat, audio, stage, roundtable, ui
 │
-├── packages/                   # Workspace packages
-│   ├── pptxgenjs/              #   Customized PowerPoint generation
-│   └── mathml2omml/            #   MathML → Office Math conversion
-│
-├── skills/                     # OpenClaw / ClawHub skills
-│   └── openmaic/               #   Guided OpenMAIC setup & generation SOP
-│       ├── SKILL.md            #   Thin router with confirmation rules
-│       └── references/         #   On-demand SOP sections
-│
-├── configs/                    # Shared constants (shapes, fonts, hotkeys, themes …)
-└── public/                     # Static assets (logos, avatars)
+├── data/                       # JSON persistence (users / courses / classrooms / jobs)
+├── scripts/                    # start-8002, media backfill, maintenance scripts
+├── skills/                     # OpenClaw / ClawHub skill files
+├── docs/                       # plans, specs, test briefs, internal docs
+├── packages/                   # workspace packages
+└── public/                     # logos and static assets
 ```
 
 ### Key Architecture

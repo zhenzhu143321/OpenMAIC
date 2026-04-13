@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- **User authentication & role permissions** — admin / teacher / student roles, status management (`active`, `pending_review`, `disabled`), login/register/logout/me APIs, admin user management page, middleware login gate, and per-route server authorization.
+- **Course-first publishing workflow** — chapter-based courses, classroom binding, draft/published status, read-only public course view mode, and homepage separation between published courses and standalone classrooms.
+- **QNAIGC / Qiniu Cloud media support** — QNAIGC TTS provider with 38 built-in voices and QNAIGC image generation provider backed by `gemini-3.1-flash-image-preview`.
+- **Operational runbooks** — standalone 8002 startup SOP, media backfill script usage, and refreshed deploy/auth documentation.
+
+### Changed
+
+- **Server-side classroom model** now persists `ownerId` and `visibility`, enabling course-bound/public/private access patterns.
+- **Course store/API contract** now consistently uses `{ success, course/courses }` envelopes.
+- **Documentation set refreshed** to reflect auth, course publishing, standalone deployment, and new provider support.
+
+### Fixed
+
+- **Published classroom playback reliability** — fixed prefill/media race conditions and added loading indicators for classroom load and pre-playback resource preparation.
+- **HTTP deployment auth cookie behavior** — `AUTH_COOKIE_SECURE` can now be disabled safely for plain-HTTP internal deployments.
+- **Role-aware UI visibility** — hidden course creation / deletion actions for students and unapproved teachers, including the empty-state create button.
+- **Cold-start i18n behavior** — loading overlays now respect the persisted locale without flashing the wrong language.
+
 ## [0.1.0] - 2026-03-26
 
 The first tagged release of OpenMAIC, including all improvements since the initial open-source launch.

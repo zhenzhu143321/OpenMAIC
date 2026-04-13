@@ -1,5 +1,8 @@
 # Course Management Feature - Implementation Plan
 
+> **状态更新（2026-04-13）**：本计划对应功能已完成实现，但实际落地方案已从最初的 `classroomIds[]` 扁平结构升级为 **chapter-based 课程模型**，并叠加了认证权限、课程发布/取消发布、公共课程视图与课堂可见性控制。下方内容作为历史设计记录保留，阅读时请以 `lib/types/course.ts`、`app/course/*`、`app/api/course*` 的现状为准。
+
+
 ## 需求概述
 
 为 OpenMAIC 添加「课程」管理功能，使教师能够创建课程并将多个课堂组织到课程中。
