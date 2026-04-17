@@ -68,3 +68,6 @@ next-env.d.ts
 
 # local deploy guide (contains machine-specific config)
 CLAUDE_DEPLOY_GUIDE.md
+
+# deploy backups
+.deploy-backups/

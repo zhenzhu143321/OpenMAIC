@@ -13,30 +13,33 @@ pnpm test                # Vitest
 pnpm exec tsc --noEmit   # TypeScript check
 ```
 
-### Production Service (Port 8002)
+### Dev / Production Separation
 
-The deployed 8002 instance must run from the **standalone build**.
+Development happens in the **worktree** (`OpenMAIC-dev`), production repo is only used for deployment.
 
-Preferred detached startup:
+**Daily development (in worktree):**
+
+```bash
+cd /home/sunli/MyWork/myproject/OpenMAIC-dev
+pnpm dev   # :3000, uses OpenMAIC-dev/data/ — production data untouched
+```
+
+**Deploy to production (in production repo):**
 
 ```bash
 cd /home/sunli/MyWork/myproject/OpenMAIC
-tmux new-session -d -s openmaic-svc-8002 './scripts/start-8002.sh >>/tmp/openmaic-8002.log 2>&1'
+git pull origin main        # pull merged changes
+./scripts/deploy.sh         # build → backup → restart → health check
 ```
 
-After any server-side code change:
+**Rollback:**
 
 ```bash
-pnpm build
-tmux kill-session -t openmaic-svc-8002 || true
-tmux new-session -d -s openmaic-svc-8002 './scripts/start-8002.sh >>/tmp/openmaic-8002.log 2>&1'
+./scripts/rollback.sh                                          # latest backup
+./scripts/rollback.sh .deploy-backups/standalone-DATE.tar.gz  # specific version
 ```
 
-Verify:
-
-```bash
-curl http://127.0.0.1:8002/api/health
-```
+Last 5 builds are kept in `.deploy-backups/`. Do NOT run `pnpm build` directly in the production repo — always use `deploy.sh`.
 
 ### Proxy Note
 
