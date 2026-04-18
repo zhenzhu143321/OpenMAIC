@@ -2,9 +2,10 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { apiSuccess, apiError, API_ERROR_CODES } from '@/lib/server/api-response';
-import { isValidClassroomId } from '@/lib/server/classroom-storage';
+import { isValidClassroomId, readClassroom } from '@/lib/server/classroom-storage';
 import { listMedia, saveMedia, getMediaPath, mediaExists } from '@/lib/server/media-storage';
 import { requireUser, requireRole } from '@/lib/server/auth-helpers';
+import { canAccessClassroom } from '@/lib/server/classroom-access';
 
 const MIME_MAP: Record<string, string> = {
   '.mp3': 'audio/mpeg',
@@ -21,10 +22,19 @@ const MAX_UPLOAD_SIZE = 50 * 1024 * 1024; // 50MB
 export async function GET(request: NextRequest) {
   const authResult = await requireUser(request);
   if (authResult instanceof NextResponse) return authResult;
+  const currentUser = authResult;
 
   const id = request.nextUrl.searchParams.get('id');
   if (!id || !isValidClassroomId(id)) {
     return apiError(API_ERROR_CODES.INVALID_REQUEST, 400, 'Invalid or missing classroom id');
+  }
+
+  const classroom = await readClassroom(id);
+  if (!classroom) {
+    return apiError(API_ERROR_CODES.INVALID_REQUEST, 404, 'Classroom not found');
+  }
+  if (!(await canAccessClassroom(classroom, currentUser))) {
+    return apiError(API_ERROR_CODES.INTERNAL_ERROR, 403, 'Forbidden');
   }
 
   const listAll = request.nextUrl.searchParams.get('list');

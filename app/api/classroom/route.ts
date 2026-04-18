@@ -10,30 +10,7 @@ import {
   type ClassroomVisibility,
 } from '@/lib/server/classroom-storage';
 import { requireUser, requireRole, requireOwnership } from '@/lib/server/auth-helpers';
-import { listCourses, readCourse } from '@/lib/server/course-storage';
-
-async function canAccessClassroom(
-  classroom: NonNullable<Awaited<ReturnType<typeof readClassroom>>>,
-  userId: string,
-  userRole: string,
-): Promise<boolean> {
-  if (userRole === 'admin' || classroom.ownerId === userId) return true;
-
-  if (classroom.visibility === 'standalone-published') return true;
-
-  if (classroom.visibility === 'course-bound') {
-    const courseList = await listCourses();
-    const publishedCourses = courseList.filter((c) => c.status === 'published');
-    for (const courseItem of publishedCourses) {
-      const course = await readCourse(courseItem.id);
-      if (course?.chapters?.some((ch) => ch.classroomId === classroom.id)) {
-        return true;
-      }
-    }
-  }
-
-  return false; // private
-}
+import { canAccessClassroom, buildPublishedCourseClassroomSet } from '@/lib/server/classroom-access';
 
 export async function POST(request: NextRequest) {
   const authResult = await requireRole(request, 'teacher', 'admin');
@@ -81,6 +58,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
 
+  // Single classroom lookup
   if (id) {
     if (!isValidClassroomId(id)) {
       return apiError(API_ERROR_CODES.INVALID_REQUEST, 400, 'Invalid classroom ID');
@@ -89,13 +67,27 @@ export async function GET(request: NextRequest) {
     if (!classroom) {
       return apiError(API_ERROR_CODES.INTERNAL_ERROR, 404, 'Classroom not found');
     }
-    const accessible = await canAccessClassroom(classroom, currentUser.id, currentUser.role);
+    const accessible = await canAccessClassroom(classroom, currentUser);
     if (!accessible) {
       return apiError(API_ERROR_CODES.INTERNAL_ERROR, 403, 'Forbidden');
     }
     return apiSuccess({ classroom });
   }
 
+  // List: admins see everything; others see only accessible classrooms
   const list = await listClassrooms();
-  return apiSuccess({ classrooms: list });
+  if (currentUser.role === 'admin') {
+    return apiSuccess({ classrooms: list });
+  }
+
+  const publishedBoundIds = await buildPublishedCourseClassroomSet();
+  const visible = [];
+  for (const item of list) {
+    const full = await readClassroom(item.id);
+    if (!full) continue;
+    if (await canAccessClassroom(full, currentUser, { publishedBoundIds })) {
+      visible.push(item);
+    }
+  }
+  return apiSuccess({ classrooms: visible });
 }

@@ -54,7 +54,7 @@ export async function requireUser(
 /**
  * Returns the effective role, treating pending_review teachers as students.
  */
-function effectiveRole(user: SafeUser): UserRole {
+export function effectiveRole(user: SafeUser): UserRole {
   if (user.status === 'pending_review') return 'student';
   return user.role;
 }
